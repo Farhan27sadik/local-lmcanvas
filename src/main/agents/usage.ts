@@ -69,6 +69,31 @@ export function normalizeUsage(
   return Object.keys(usage).length > 0 ? usage : undefined;
 }
 
+const TOKEN_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cachedInputTokens",
+  "cacheReadInputTokens",
+  "cacheCreationInputTokens",
+  "reasoningOutputTokens",
+  "totalTokens",
+] as const;
+
+/** Usage over several turns of one run: token counts add up, the cost is the later running total. */
+export function addTurnUsage(
+  earlier: UsageSummary | undefined,
+  later: UsageSummary | undefined,
+): UsageSummary | undefined {
+  if (!earlier || !later) return later ?? earlier;
+  const sum: UsageSummary = { ...earlier, ...later };
+  for (const field of TOKEN_FIELDS) {
+    if (earlier[field] !== undefined || later[field] !== undefined) {
+      sum[field] = (earlier[field] ?? 0) + (later[field] ?? 0);
+    }
+  }
+  return sum;
+}
+
 function firstNumber(...values: unknown[]): number | undefined {
   for (const value of values) {
     if (typeof value === "number" && Number.isFinite(value)) return value;

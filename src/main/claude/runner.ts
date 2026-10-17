@@ -99,7 +99,7 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import type { Client } from "../api/client";
 import type { Attachment } from "@shared/ipc";
-import { isClaudeEffort, type ProviderSessionRef, type ReasoningEffort } from "@shared/types";
+import { isClaudeEffort, type ProviderSessionRef, type ReasoningEffort, type UsageSummary } from "@shared/types";
 import { buildAskUserServer } from "./askUserMcp";
 import { findExecutable } from "./configuredBin";
 import {
@@ -108,7 +108,8 @@ import {
   isPromptTooLong,
   type RunnerEvent,
 } from "../agents/types";
-import { normalizeUsage } from "../agents/usage";
+import { addTurnUsage, normalizeUsage } from "../agents/usage";
+import { backgroundAgentTracker } from "./backgroundAgents";
 import { measureContext, measuresAfter } from "./contextUsage";
 import { heldOpenPrompt } from "./heldOpenPrompt";
 import { notificationResultFilter } from "./notificationResults";
@@ -158,6 +159,7 @@ export type RunClaudeOpts = {
   client: Client;
   nodeId: string;
   onEvent: (ev: RunnerEvent) => void;
+  queryFn?: typeof query;
 };
 
 export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<void> {
@@ -170,9 +172,12 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
   const seenToolUseIds = new Set<string>();
   let doneEmitted = false;
   let emittedSessionId: string | null = null;
+  const agents = backgroundAgentTracker();
+  let earlierUsage: UsageSummary | undefined;
 
   const emit = (ev: RunnerEvent): void => {
     if (ev.kind === "done") doneEmitted = true;
+    if (ev.kind === "response_complete" && agents.running()) return;
     if (ev.kind === "error" && !ev.code && isAuthError(ev.message)) {
       opts.onEvent({ ...ev, code: "auth_required" });
       return;
@@ -228,7 +233,7 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
       };
 
   try {
-    const q = query({
+    const q = (opts.queryFn ?? query)({
       prompt: held.input,
       options: {
         cwd: opts.cwd,
@@ -265,6 +270,8 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
     const isNotificationResult = notificationResultFilter();
     for await (const msg of q as AsyncIterable<SDKMessage>) {
       if (isNotificationResult(msg)) continue;
+      agents.observe(msg);
+      if (agents.ownsMessage(msg)) continue;
       const sessionId = (msg as { session_id?: unknown }).session_id;
       if (
         typeof sessionId === "string" &&
@@ -276,11 +283,15 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
       }
       const systemEvent = mapSystemMessage(msg);
       if (systemEvent) emit(systemEvent);
+      if (msg.type === "result" && msg.subtype === "success" && !msg.is_error && agents.running()) {
+        earlierUsage = addTurnUsage(earlierUsage, resultUsage(msg));
+        continue;
+      }
       if (msg.type === "result" && measuresAfter(msg)) {
         const context = await measureContext(q);
         if (context) emit({ kind: "context", context });
       }
-      handleMessage(msg, seenToolUseIds, emit);
+      handleMessage(msg, seenToolUseIds, emit, earlierUsage);
       if (msg.type === "result") break;
     }
   } catch (err: unknown) {
@@ -295,7 +306,8 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
 function handleMessage(
   msg: SDKMessage,
   seenToolUseIds: Set<string>,
-  emit: (ev: RunnerEvent) => void
+  emit: (ev: RunnerEvent) => void,
+  earlierUsage: UsageSummary | undefined
 ): void {
   switch (msg.type) {
     case "stream_event":
@@ -308,7 +320,7 @@ function handleMessage(
       handleUser(msg, emit);
       return;
     case "result":
-      handleResult(msg, emit);
+      handleResult(msg, emit, earlierUsage);
       return;
     default:
       return;
@@ -382,10 +394,18 @@ function handleUser(msg: SDKUserMessage, emit: (ev: RunnerEvent) => void): void 
   }
 }
 
-function handleResult(msg: SDKResultMessage, emit: (ev: RunnerEvent) => void): void {
-  const usage = normalizeUsage((msg as { usage?: unknown }).usage, {
+function resultUsage(msg: SDKResultMessage): UsageSummary | undefined {
+  return normalizeUsage((msg as { usage?: unknown }).usage, {
     totalCostUsd: (msg as { total_cost_usd?: unknown }).total_cost_usd,
   });
+}
+
+function handleResult(
+  msg: SDKResultMessage,
+  emit: (ev: RunnerEvent) => void,
+  earlierUsage: UsageSummary | undefined
+): void {
+  const usage = addTurnUsage(earlierUsage, resultUsage(msg));
   if (msg.subtype === "success") {
     emit({ kind: "done", isError: msg.is_error, result: msg.result, usage });
     return;
