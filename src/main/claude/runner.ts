@@ -111,6 +111,7 @@ import {
 import { normalizeUsage } from "../agents/usage";
 import { measureContext, measuresAfter } from "./contextUsage";
 import { heldOpenPrompt } from "./heldOpenPrompt";
+import { notificationResultFilter } from "./notificationResults";
 import { mapSystemMessage } from "./systemEvents";
 
 const ASK_USER_SYSTEM_NOTE = `\n\nWhen you need to ask the local user a structured multiple-choice question, use the \`mcp__lmc__ask_user_question\` tool. It renders an interactive picker inside the local-lmcanvas app. Do NOT use the built-in AskUserQuestion tool — it is disabled in this environment.`;
@@ -261,7 +262,9 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
       },
     });
 
+    const isNotificationResult = notificationResultFilter();
     for await (const msg of q as AsyncIterable<SDKMessage>) {
+      if (isNotificationResult(msg)) continue;
       const sessionId = (msg as { session_id?: unknown }).session_id;
       if (
         typeof sessionId === "string" &&

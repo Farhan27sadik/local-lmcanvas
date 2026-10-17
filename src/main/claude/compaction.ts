@@ -4,6 +4,7 @@ import { COMPACTION_STOPPED_MESSAGE, MAX_COMPACT_FOCUS_CHARS } from "@shared/con
 import { normalizeUsage } from "../agents/usage";
 import { measureContext } from "./contextUsage";
 import { heldOpenPrompt } from "./heldOpenPrompt";
+import { notificationResultFilter } from "./notificationResults";
 import { mapSystemMessage } from "./systemEvents";
 
 const COMPACTION_TIMEOUT_MS = 10 * 60_000;
@@ -88,6 +89,7 @@ export async function runCompaction(req: CompactionRequest): Promise<CompactResu
     if (compacted) return kept();
     throw new Error(req.signal?.aborted ? COMPACTION_STOPPED_MESSAGE : COMPACTION_TIMED_OUT_MESSAGE);
   };
+  const isNotificationResult = notificationResultFilter();
   try {
     for await (const msg of session as AsyncIterable<SDKMessage>) {
       // Read the message before honouring a Stop: a compaction already reported still counts.
@@ -101,6 +103,7 @@ export async function runCompaction(req: CompactionRequest): Promise<CompactResu
         after = event.after;
       }
       if (req.signal?.aborted || timedOut) return interrupted();
+      if (isNotificationResult(msg)) continue;
       if (msg.type === "result") {
         if (msg.is_error || msg.subtype !== "success") {
           if (compacted) return kept();

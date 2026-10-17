@@ -34,6 +34,14 @@ describe("runCompaction", () => {
     expect(first.value.message.content).toBe("/compact keep X");
   });
 
+  test("compacts a session whose background agent was cut off (its notice comes first, with an empty result)", async () => {
+    const notice = { type: "system", subtype: "task_notification", task_id: "a8e5", status: "failed", summary: "Background agent didn't finish" };
+    const empty = { type: "result", subtype: "success", is_error: false, num_turns: 0, result: "" };
+    const { queryFn } = fakeQuery([notice, empty, BOUNDARY, RESULT], { usage: USAGE });
+    const out = await runCompaction({ sessionId: "s1", fork: true, cwd: "/tmp", queryFn });
+    expect(out).toMatchObject({ sessionId: "s2", before: 412_000, after: 38_000 });
+  });
+
   test("never lets Claude Code use a tool while it compacts", async () => {
     const { queryFn, seen } = fakeQuery([BOUNDARY, RESULT], { usage: USAGE });
     await runCompaction({ sessionId: "s1", fork: false, cwd: "/tmp", queryFn });
