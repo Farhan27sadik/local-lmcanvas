@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { consumeJsonl } from "./jsonlReader";
+import { runKimiAcp } from "./kimiAcp";
 import { kimiLineEvents } from "./kimiStream";
 import { shellEnv } from "../shellPath";
 import { resolveCommandLine } from "../commandLine";
@@ -42,6 +43,8 @@ async function forkSession(bin: string, parentId: string, cwd: string, signal?: 
 }
 
 export async function runKimi(prompt: string, opts: RunAgentOpts): Promise<void> {
+  // Print mode runs every tool unattended; only ACP can stop and ask.
+  if (opts.approval === "ask") return runKimiAcp(prompt, opts);
   if (opts.attachments && opts.attachments.length > 0) {
     opts.onEvent({ kind: "error", message: "Image attachments are not yet supported for the kimi provider." });
     opts.onEvent({ kind: "done", isError: true });

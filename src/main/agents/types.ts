@@ -96,7 +96,7 @@ export type RunAgentOpts = {
   planMode?: boolean;
   /** Claude-only; skip the claude_code preset for a fast pure-chat path. Ignored when planMode is also true. */
   chatOnly?: boolean;
-  /** `ask` stops for the user's OK first. Claude and Codex only; Cursor and Kimi refuse it. */
+  /** `ask` stops for the user's OK first. Claude, Codex and Kimi; Cursor refuses it. */
   approval?: ApprovalMode;
   // client/nodeId are claude-specific (askUser MCP), but kept required so
   // the API handler can pass a single opts object to any provider runner.
