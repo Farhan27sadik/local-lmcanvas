@@ -28,7 +28,7 @@ import { SelectionActionButton } from "./SelectionActionButton";
 import { CustomNodeContextBanner } from "./CustomNodeContextBanner";
 import { TemporaryBadge } from "./TemporaryBadge";
 import { NodeCopyButton } from "./NodeCopyButton";
-import { NodeRegenerateButton } from "./NodeRegenerateButton";
+import { NodeEditPromptButton, NodeRegenerateButton } from "./NodeRegenerateButton";
 import { NodeSourceHandles, NodeTargetHandles } from "./NodeHandles";
 import { ResizeHandle } from "./ResizeHandle";
 import { useAskUserStore } from "@/hooks/useAskUserStore";
@@ -422,6 +422,7 @@ function CustomNodeImpl(props: NodeProps) {
               hovered || selected ? "opacity-100" : "opacity-0 pointer-events-none",
             )}
           >
+            {canEditPrompt && <NodeEditPromptButton onClick={() => promptEdit.setIsEditing(true)} />}
             {canEditPrompt && (
               <NodeRegenerateButton
                 onClick={() => regenerateConfirm.trigger()}
