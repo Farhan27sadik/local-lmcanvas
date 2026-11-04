@@ -6,6 +6,19 @@ Guide for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this re
 
 `local-lmcanvas` is a fully-local, canvas-based branching AI conversation tool. Electron 33 + React 19 + TypeScript 5.6 (strict). Supports multiple CLI-backed providers (Claude, Codex, Cursor) with per-provider model selection; collects no telemetry.
 
+## Branches and pull requests
+
+`main` is the default branch and the only long-lived one. **Never commit or push to `main` directly, and never force-push it.** Every change reaches `main` through a pull request.
+
+1. Start from an up-to-date `main`: `git switch main && git pull --ff-only && git switch -c <type>/<short-name>`.
+2. Name the branch `<type>/<short-name>`; the types are the commit types (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`), e.g. `fix/thread-order`.
+3. Keep one concern per branch. Commit as `<type>: <description>`.
+4. Before opening the PR, run `bun run typecheck` and the tests for the files you touched. CI only runs on version tags, so a PR gets no automatic checks.
+5. Push the branch and open a PR into `main` (`gh pr create --base main`), filling in `.github/PULL_REQUEST_TEMPLATE.md`.
+6. Don't merge your own PR unless asked, and don't commit or push unless asked. Delete the branch once it is merged.
+
+Building and installing the app for a test happens from the branch. Syncing with upstream follows the same path: branch from `main`, `git fetch upstream && git merge upstream/main`, then a PR.
+
 ## Build & verify
 
 ```bash
