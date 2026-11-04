@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Loader2, X } from "lucide-react";
-import { ReactFlowProvider, useStoreApi } from "@xyflow/react";
+import { ReactFlowProvider, useReactFlow, useStoreApi } from "@xyflow/react";
 import { useOrganizeRequestStore } from "@/hooks/useOrganizeRequestStore";
 import { makeLiveHeightMeasurer } from "@/lib/collisionResolution";
 import { decideOrganizeRequest, ORGANIZE_HELD_ELSEWHERE } from "@/lib/organizeRequest";
@@ -95,6 +95,7 @@ function CanvasPaneInner({ id, splitMode, controlsSide = "right" }: CanvasPanePr
   const organizeRequest = useOrganizeRequestStore((s) => s.request);
   const consumeOrganize = useOrganizeRequestStore((s) => s.consume);
   const flow = useStoreApi();
+  const rf = useReactFlow();
   const addNode = useCanvasStore((s) => s.addNode);
   const setActive = useActivePaneStore((s) => s.setActive);
   const activePaneId = useActivePaneStore((s) => s.activePaneId);
@@ -147,8 +148,28 @@ function CanvasPaneInner({ id, splitMode, controlsSide = "right" }: CanvasPanePr
     }
     // One frame for the nodes to be on screen, so their heights can be read.
     const measure = makeLiveHeightMeasurer(() => flow.getState().transform[2]);
-    requestAnimationFrame(() => void organize(measure));
-  }, [organizeRequest, loaded, canvasId, id, error, lock, flow, storeApi, organize, consumeOrganize]);
+    const mode = organizeRequest.mode;
+    requestAnimationFrame(() => {
+      void organize(measure, mode).then(() => {
+        const current = storeApi.getState();
+        if (mode !== "topic-tree" || current.canvasId !== id || current.lock !== "held" || current.organizing || current.organizeError) return;
+        const chats = Object.values(current.nodes).filter((n) => n.type === "custom");
+        const chatIds = new Set(chats.map((n) => n.id));
+        const rootIds = new Set(chats.filter((n) => {
+          const parent = n.data.chat.parentIds[0];
+          return parent === undefined || parent === n.id || !chatIds.has(parent);
+        }).map((n) => n.id));
+        const overview = rootIds.size === 0
+          ? chats
+          : chats.filter((n) => rootIds.has(n.id) || rootIds.has(n.data.chat.parentIds[0] ?? ""));
+        requestAnimationFrame(() => void rf.fitView({
+          nodes: overview.map((n) => ({ id: n.id })),
+          padding: 0.15,
+          duration: 400,
+        }));
+      });
+    });
+  }, [organizeRequest, loaded, canvasId, id, error, lock, flow, rf, storeApi, organize, consumeOrganize]);
 
   useEffect(() => {
     if (!organizeError) return;

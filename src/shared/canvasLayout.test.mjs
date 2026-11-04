@@ -1,6 +1,6 @@
 // .mjs keeps the bun:test import out of `bun run typecheck`.
 import { describe, expect, test } from "bun:test";
-import { layoutCanvas } from "./canvasLayout.ts";
+import { layoutCanvas, layoutTopicTree } from "./canvasLayout.ts";
 
 const GAP = { x: 100, y: 80 };
 const WIDTH = 1100;
@@ -121,5 +121,73 @@ describe("layoutCanvas", () => {
   test("a tall node pushes the nodes below it down", () => {
     const positions = layout([node("a", [], 1), node("b", ["a"], 2)], {}, { a: 900 });
     expect(positions.b).toEqual({ x: 0, y: 980 });
+  });
+});
+
+describe("layoutTopicTree", () => {
+  function topic(nodes, heights = {}) {
+    const positions = layoutTopicTree(nodes, (n) => ({ width: WIDTH, height: heights[n.id] ?? 300 }), GAP);
+    expectNoOverlap(positions, (id) => heights[id] ?? 300);
+    return positions;
+  }
+
+  test("each root branch and all its descendants share one column", () => {
+    const nodes = [
+      node("r", [], 1),
+      node("a", ["r"], 2),
+      node("b", ["r"], 3),
+      node("a1", ["a"], 4),
+      node("a1x", ["a1"], 5),
+      node("a2", ["a"], 6),
+    ];
+
+    expect(topic(nodes)).toEqual({
+      r: { x: 0, y: 0 },
+      a: { x: -600, y: 1100 },
+      b: { x: 600, y: 1100 },
+      a1: { x: -600, y: 1480 },
+      a1x: { x: -600, y: 1860 },
+      a2: { x: -600, y: 2240 },
+    });
+  });
+
+  test("columns stack independently using their own node heights", () => {
+    const nodes = [
+      node("r", [], 1),
+      node("a", ["r"], 2),
+      node("b", ["r"], 3),
+      node("a1", ["a"], 4),
+      node("b1", ["b"], 5),
+    ];
+    const positions = topic(nodes, { r: 900, a: 300, b: 500, a1: 300, b1: 300 });
+
+    expect(positions.a.y).toBe(1100);
+    expect(positions.b.y).toBe(1100);
+    expect(positions.a1.y).toBe(1480);
+    expect(positions.b1.y).toBe(1680);
+  });
+
+  test("separate roots sit side by side with their descendants", () => {
+    const nodes = [node("r1", [], 1), node("dd", ["r1"], 2), node("r2", [], 10), node("r2c", ["r2"], 11)];
+    expect(topic(nodes)).toEqual({
+      r1: { x: 0, y: 0 },
+      dd: { x: 0, y: 1100 },
+      r2: { x: 1200, y: 0 },
+      r2c: { x: 1200, y: 1100 },
+    });
+  });
+
+  test("cycles and missing parents still place every chat once, but not sticky notes", () => {
+    const nodes = [
+      node("a", ["b"], 1),
+      node("b", ["a"], 2),
+      node("c", ["missing"], 3),
+      node("self", ["self"], 4),
+      sticky,
+    ];
+    const first = topic(nodes);
+
+    expect(Object.keys(first).sort()).toEqual(["a", "b", "c", "self"]);
+    expect(topic(nodes)).toEqual(first);
   });
 });

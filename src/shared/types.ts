@@ -267,6 +267,8 @@ export type ProviderConfig = {
   serviceTier?: CodexServiceTier;
 };
 
+export type OrganizeMode = "conversation-lanes" | "topic-tree";
+
 /** How a branch sits after Organize: on the main line, a deep dive to the right, or off-topic to the left. */
 export type OrganizeKind = "main" | "deep-dive" | "off-topic";
 
@@ -277,7 +279,13 @@ export type OrganizePlan = Record<NodeId, OrganizeNodePlan>;
 /** Positions and titles from before the user first organized, for Undo organize. */
 export type OrganizeSnapshot = Record<NodeId, { x: number; y: number; title?: string }>;
 
-export type CanvasOrganized = { fingerprint: string; plan: OrganizePlan; undo: OrganizeSnapshot };
+export type CanvasOrganized = {
+  fingerprint: string;
+  /** Missing on canvases organized before Topic tree was added. */
+  mode?: OrganizeMode;
+  plan: OrganizePlan;
+  undo: OrganizeSnapshot;
+};
 
 /** Who set a canvas's name: the app, which keeps renaming it as the canvas grows, or the user. */
 export type NameSource = "auto" | "user";

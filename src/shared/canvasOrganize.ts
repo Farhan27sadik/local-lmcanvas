@@ -149,7 +149,12 @@ export function parseOrganized(raw: unknown): CanvasOrganized | undefined {
     if (!isRecord(e) || !isFiniteNumber(e.x) || !isFiniteNumber(e.y)) continue;
     undo[id] = { x: e.x, y: e.y, ...(typeof e.title === "string" ? { title: e.title } : {}) };
   }
-  return { fingerprint: raw.fingerprint, plan, undo };
+  return {
+    fingerprint: raw.fingerprint,
+    ...(raw.mode === "conversation-lanes" || raw.mode === "topic-tree" ? { mode: raw.mode } : {}),
+    plan,
+    undo,
+  };
 }
 
 function firstText(messages: Message[], role: Message["role"]): string {

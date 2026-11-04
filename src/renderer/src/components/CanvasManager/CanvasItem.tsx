@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Download,
   ExternalLink,
+  ListTree,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -12,7 +13,7 @@ import {
   Workflow,
 } from "lucide-react";
 import clsx from "clsx";
-import type { Canvas, CanvasSummary } from "@shared/types";
+import type { Canvas, CanvasSummary, OrganizeMode } from "@shared/types";
 import { computeThreads, type ThreadTree } from "@shared/threads";
 import { prettyPath } from "@/lib/prettyPath";
 import { isBrowser } from "@/lib/webBridge";
@@ -26,8 +27,8 @@ type CanvasItemProps = {
   onRename: (newName: string) => Promise<void>;
   /** Save the canvas to a .lmcanvas file to share. Not offered in the browser. */
   onExport: () => void;
-  /** Lay the canvas out and title its nodes with AI. */
-  onOrganize: () => void;
+  /** Lay the canvas out in the selected mode. Conversation lanes also titles its nodes with AI. */
+  onOrganize: (mode: OrganizeMode) => void;
   /** Put the canvas back as it was before it was first organized. Offered when `canvas.organized`. */
   onUndoOrganize: () => void;
   onDelete: () => void;
@@ -321,14 +322,27 @@ export const CanvasItem = ({
                   )}
                   <button
                     className="w-full cursor-pointer px-3 py-2 text-sm text-left transition-colors flex items-center gap-2 text-foreground hover:bg-muted"
+                    title="Stack each branch in its own column without changing titles"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowMenu(false);
-                      onOrganize();
+                      onOrganize("topic-tree");
+                    }}
+                  >
+                    <ListTree className="h-4 w-4" />
+                    Topic tree
+                  </button>
+                  <button
+                    className="w-full cursor-pointer px-3 py-2 text-sm text-left transition-colors flex items-center gap-2 text-foreground hover:bg-muted"
+                    title="Arrange conversation lanes and title nodes with AI"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      onOrganize("conversation-lanes");
                     }}
                   >
                     <Workflow className="h-4 w-4" />
-                    Organize
+                    Conversation lanes
                   </button>
                   {canvas.organized && (
                     <button

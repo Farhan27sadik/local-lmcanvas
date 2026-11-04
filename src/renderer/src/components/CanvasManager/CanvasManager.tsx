@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileUp, PanelLeft, Plus, Settings } from "lucide-react";
-import type { Canvas, CanvasSummary } from "@shared/types";
+import type { Canvas, CanvasSummary, OrganizeMode } from "@shared/types";
 import { nameAfterRename } from "@shared/canvasName";
 import { restoreFromUndo } from "@shared/canvasOrganize";
 import { useOrganizeRequestStore } from "@/hooks/useOrganizeRequestStore";
@@ -144,8 +144,8 @@ export function CanvasManager({
   };
 
   // Organize measures nodes on screen, so it runs in the pane once that canvas is showing.
-  const handleOrganize = (id: string) => {
-    useOrganizeRequestStore.getState().requestOrganize(id);
+  const handleOrganize = (id: string, mode: OrganizeMode) => {
+    useOrganizeRequestStore.getState().requestOrganize(id, mode);
     if (id !== currentCanvasId) navigateToCanvas(id);
   };
 
@@ -325,7 +325,7 @@ export function CanvasManager({
                         onSelect={() => handleSelect(c)}
                         onRename={(newName) => handleRename(c.id, newName)}
                         onExport={() => void handleExport(c.id)}
-                        onOrganize={() => handleOrganize(c.id)}
+                        onOrganize={(mode) => handleOrganize(c.id, mode)}
                         onUndoOrganize={() => void handleUndoOrganize(c.id)}
                         onDelete={() => handleDelete(c.id, c.name)}
                         onThreadSelect={handleThreadSelect}

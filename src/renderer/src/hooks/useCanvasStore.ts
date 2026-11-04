@@ -14,6 +14,7 @@ import type {
   Message,
   ModelFallback,
   CanvasOrganized,
+  OrganizeMode,
   OrganizePlan,
   NameSource,
   NodeId,
@@ -59,7 +60,7 @@ import {
   snapshotFor,
   type AliasPlan,
 } from "@shared/canvasOrganize";
-import { layoutCanvas } from "@shared/canvasLayout";
+import { layoutCanvas, layoutTopicTree } from "@shared/canvasLayout";
 import { nodeTitleInput, promptTitle, shownTitle, titleShows } from "@shared/nodeTitle";
 import { keyboardBranchPosition } from "@/lib/childPlacement";
 import { useRecentsStore } from "@/hooks/useRecentsStore";
@@ -136,9 +137,9 @@ export type CanvasStoreState = {
   /** Waiting for Claude's organize plan. */
   organizing: boolean;
   organizeError: string | null;
-  /** Lay the canvas out from an organize plan (reused when nothing changed, else asked of Claude)
-   *  and title its nodes. Heights come from `measureHeight`, since only the screen knows them. */
-  organize: (measureHeight: (id: NodeId) => number) => Promise<void>;
+  /** Lay the canvas out in the selected mode. Conversation lanes reuses or asks Claude for a plan
+   *  and titles nodes; Topic tree only uses the graph. Heights come from the screen. */
+  organize: (measureHeight: (id: NodeId) => number, mode?: OrganizeMode) => Promise<void>;
   /** Put positions and titles back as they were before the first organize, and forget the plan. */
   undoOrganize: () => void;
   /** Give a node a short AI title in place of its automatic one, once it has a finished reply. */
@@ -605,7 +606,7 @@ export function createCanvasStoreApi(): CanvasStoreApi {
         window.dispatchEvent(new Event("lmc:canvases-changed"));
       },
 
-      organize: async (measureHeight) => {
+      organize: async (measureHeight, mode = "conversation-lanes") => {
         const s = get();
         const canvasId = s.canvasId;
         // One organize at a time: a second would race the first and hide its progress early.
@@ -616,32 +617,35 @@ export function createCanvasStoreApi(): CanvasStoreApi {
         }
         set({ organizeError: null });
         const before = Object.values(s.nodes);
-        let plan: OrganizePlan;
-        if (s.organized && s.organized.fingerprint === organizeFingerprint(before)) {
-          plan = s.organized.plan;
-        } else {
-          const { request, aliasToId } = buildPlanRequest(before, s.organized?.plan);
-          set({ organizing: true });
-          let reply: AliasPlan | null = null;
-          try {
-            reply = await window.api.canvasOrganize.plan(request);
-          } catch (err) {
-            console.warn("Organize plan failed:", err);
+        let plan: OrganizePlan = {};
+        if (mode === "conversation-lanes") {
+          const previousMode = s.organized?.mode ?? "conversation-lanes";
+          if (previousMode === mode && s.organized?.fingerprint === organizeFingerprint(before)) {
+            plan = s.organized.plan;
+          } else {
+            const { request, aliasToId } = buildPlanRequest(before, s.organized?.plan);
+            set({ organizing: true });
+            let reply: AliasPlan | null = null;
+            try {
+              reply = await window.api.canvasOrganize.plan(request);
+            } catch (err) {
+              console.warn("Organize plan failed:", err);
+            }
+            set({ organizing: false });
+            const now = get();
+            // The pane moved to another canvas, or another window took this one, while Claude was working:
+            // the result is for nothing this pane can show or save.
+            if (now.canvasId !== canvasId || now.lock !== "held") return;
+            if (!reply) {
+              set({ organizeError: ORGANIZE_NO_ANSWER });
+              return;
+            }
+            if (isReplyRunning(now)) {
+              set({ organizeError: ORGANIZE_REPLY_STARTED });
+              return;
+            }
+            plan = planFromAliases(reply, aliasToId);
           }
-          set({ organizing: false });
-          const now = get();
-          // The pane moved to another canvas, or another window took this one, while Claude was working:
-          // the result is for nothing this pane can show or save.
-          if (now.canvasId !== canvasId || now.lock !== "held") return;
-          if (!reply) {
-            set({ organizeError: ORGANIZE_NO_ANSWER });
-            return;
-          }
-          if (isReplyRunning(now)) {
-            set({ organizeError: ORGANIZE_REPLY_STARTED });
-            return;
-          }
-          plan = planFromAliases(reply, aliasToId);
         }
         set((cur) => {
           const current = Object.values(cur.nodes);
@@ -662,7 +666,9 @@ export function createCanvasStoreApi(): CanvasStoreApi {
             sizes.set(n.id, size);
             return size;
           };
-          const placed = layoutCanvas(current, plan, sizeOf, { x: ORGANIZE_GAP_X, y: ORGANIZE_GAP_Y });
+          const placed = mode === "topic-tree"
+            ? layoutTopicTree(current, sizeOf, { x: ORGANIZE_GAP_X, y: ORGANIZE_GAP_Y })
+            : layoutCanvas(current, plan, sizeOf, { x: ORGANIZE_GAP_X, y: ORGANIZE_GAP_Y });
           const nodes = Object.fromEntries(
             current.map((n) => {
               const position = placed[n.id];
@@ -671,7 +677,12 @@ export function createCanvasStoreApi(): CanvasStoreApi {
             }),
           );
           // The plan only knows the nodes it was asked about, so anything added during the wait counts as a change.
-          const organized = { fingerprint: organizeFingerprint(before), plan, undo: snapshotFor(current, cur.organized) };
+          const organized = {
+            fingerprint: organizeFingerprint(before),
+            mode,
+            plan,
+            undo: snapshotFor(current, cur.organized),
+          };
           return { nodes, organized };
         });
         get().markDirty({ keepOrder: true });

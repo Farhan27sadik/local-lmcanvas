@@ -98,6 +98,46 @@ describe("organize", () => {
     expect(store.getState().organizing).toBe(false);
   });
 
+  test("topic tree stacks branch columns without Claude, keeps titles, and supports undo", async () => {
+    const net = stubApi();
+    await store.getState().loadCanvas(CANVAS_ID);
+    const before = { positions: positions(store), titles: titles(store) };
+
+    await store.getState().organize(measure, "topic-tree");
+
+    expect(net.asked).toHaveLength(0);
+    expect(titles(store)).toEqual(before.titles);
+    expect(positions(store)).toEqual({
+      r: { x: 0, y: 0 },
+      a: { x: -650, y: 1100 },
+      d: { x: 650, y: 1100 },
+      b: { x: -650, y: 1580 },
+    });
+    expect(store.getState().organized).toMatchObject({ mode: "topic-tree", plan: {} });
+    expect(net.writes.at(-1).organized.mode).toBe("topic-tree");
+
+    store.getState().undoOrganize();
+    expect(positions(store)).toEqual(before.positions);
+    expect(titles(store)).toEqual(before.titles);
+  });
+
+  test("switching from topic tree to conversation lanes asks Claude for a plan", async () => {
+    const nodes = baseNodes();
+    const organized = {
+      fingerprint: organizeFingerprint(nodes),
+      mode: "topic-tree",
+      plan: {},
+      undo: {},
+    };
+    const net = stubApi({ nodes, organized });
+    await store.getState().loadCanvas(CANVAS_ID);
+
+    await organizeWithAnswer(net);
+
+    expect(net.asked).toHaveLength(1);
+    expect(store.getState().organized.mode).toBe("conversation-lanes");
+  });
+
   test("organizing an unchanged canvas reuses its saved plan without asking Claude", async () => {
     const nodes = baseNodes();
     const organized = {
@@ -284,6 +324,17 @@ describe("organize", () => {
     store.getState().setName("Renamed", "user");
     await store.getState().save();
     expect(net.writes.at(-1).updatedAt).toBeGreaterThan(1);
+  });
+
+  test("topic tree and its undo keep the canvas's place in the list", async () => {
+    const net = stubApi();
+    await store.getState().loadCanvas(CANVAS_ID);
+
+    await store.getState().organize(measure, "topic-tree");
+    expect(net.writes.at(-1).updatedAt).toBe(1);
+    store.getState().undoOrganize();
+    await store.getState().save();
+    expect(net.writes.at(-1).updatedAt).toBe(1);
   });
 
   test("the planner is sent the current titles and the previous plan's choices", async () => {

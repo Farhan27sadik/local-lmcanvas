@@ -146,6 +146,8 @@ describe("parseOrganized", () => {
   test("a malformed organized field is dropped on load", () => {
     const good = { fingerprint: "f", plan: { a: { title: "A", next: "b", kind: "main" } }, undo: { a: { x: 1, y: 2, title: "Old" } } };
     expect(parseOrganized(good)).toEqual(good);
+    expect(parseOrganized({ ...good, mode: "topic-tree" })).toEqual({ ...good, mode: "topic-tree" });
+    expect(parseOrganized({ ...good, mode: "unknown" })).toEqual(good);
     expect(parseOrganized(null)).toBeUndefined();
     expect(parseOrganized({ fingerprint: "f", plan: 5, undo: {} })).toBeUndefined();
     expect(parseOrganized({ fingerprint: "f", plan: {} })).toBeUndefined();
