@@ -26,6 +26,20 @@ function deriveTitle(node: CanvasNode): string {
   return "Untitled thread";
 }
 
+/** When the node was started: its first message. A node with none yet is the newest. */
+function startedAt(node: CanvasNode): number {
+  const times = node.data.chat.messages.map((m) => m.createdAt).filter((t) => Number.isFinite(t));
+  return times.length > 0 ? Math.min(...times) : Infinity;
+}
+
+/** Oldest first, then by id. Where a node sits on the canvas never decides this, so laying the
+ *  canvas out again can't reorder the list. */
+function byStart(a: CanvasNode, b: CanvasNode): number {
+  const diff = startedAt(a) - startedAt(b);
+  if (diff !== 0 && !Number.isNaN(diff)) return diff;
+  return a.id.localeCompare(b.id);
+}
+
 function primaryChild(
   node: CanvasNode,
   byId: Record<NodeId, CanvasNode>,
@@ -43,8 +57,9 @@ function primaryChild(
  *
  * A thread is a linear segment along the primary-parent chain. Threads start
  * at every root node and at every secondary child of a branching node (the
- * first child by y-position continues the parent thread; subsequent children
- * each start a sub-thread nested under their parent's thread).
+ * oldest child continues the parent thread; later children each start a
+ * sub-thread nested under their parent's thread). Threads are listed newest
+ * first at every level.
  *
  * The returned tree is flattened past depth 2 — visually we only indent one
  * level, so deeper branches are promoted alongside their level-2 siblings.
@@ -83,16 +98,11 @@ export function computeThreads(nodes: CanvasNode[]): ThreadTree[] {
 
   // Seed: every root node starts a thread.
   const roots = nodes.filter((n) => n.data.chat.parentIds.length === 0);
-  // Stable order: by y then x then id.
-  roots.sort((a, b) => {
-    if (a.position.y !== b.position.y) return a.position.y - b.position.y;
-    if (a.position.x !== b.position.x) return a.position.x - b.position.x;
-    return a.id.localeCompare(b.id);
-  });
+  roots.sort(byStart);
   for (const r of roots) threads.push(walkThread(r));
 
   // Now scan every node for branching points: their children past the first
-  // (sorted by y) each begin a sub-thread.
+  // (oldest first) each begin a sub-thread.
   // Capture parent-thread + sub-threads.
   type Branch = { parentThreadIdx: number; subThreadIdx: number };
   const branches: Branch[] = [];
@@ -103,10 +113,7 @@ export function computeThreads(nodes: CanvasNode[]): ThreadTree[] {
       .filter((c): c is CanvasNode => Boolean(c))
       .filter((c) => c.data.chat.parentIds[0] === node.id);
     if (kids.length <= 1) continue;
-    kids.sort((a, b) => {
-      if (a.position.y !== b.position.y) return a.position.y - b.position.y;
-      return a.position.x - b.position.x;
-    });
+    kids.sort(byStart);
     // First kid continues node's thread; rest start sub-threads.
     const parentThreadIdx = threadByMember[node.id];
     if (parentThreadIdx === undefined) continue;
@@ -156,7 +163,7 @@ export function computeThreads(nodes: CanvasNode[]): ThreadTree[] {
   const toTree = (idx: number): ThreadTree => {
     const info = threads[idx];
     const startNode = byId[info.startNodeId];
-    const kids = (flatChildren[idx] ?? [])
+    const kids = newestFirst(flatChildren[idx] ?? [])
       .filter((k) => k !== idx)
       .map(toTree);
     return {
@@ -167,9 +174,12 @@ export function computeThreads(nodes: CanvasNode[]): ThreadTree[] {
     };
   };
 
+  const newestFirst = (idxs: number[]): number[] =>
+    [...idxs].sort((a, b) => byStart(byId[threads[b].startNodeId], byId[threads[a].startNodeId]));
+
   const topIdxs: number[] = [];
   for (let i = 0; i < threads.length; i += 1) {
     if (isTopLevel(i)) topIdxs.push(i);
   }
-  return topIdxs.map(toTree);
+  return newestFirst(topIdxs).map(toTree);
 }
