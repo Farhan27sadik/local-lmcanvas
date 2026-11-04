@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Brain, ChevronDown } from "lucide-react";
 import type { CanvasNode, NodeId } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
-import { isNewSinceCheck, splitClaudeModels, withoutFailed } from "@shared/modelCatalog";
+import { isFailed, isNewSinceCheck, splitClaudeModels, withoutFailed } from "@shared/modelCatalog";
 import { useModelChecksStore } from "@/hooks/useModelChecksStore";
 import { nodeModelPatch } from "@/lib/claudeModelChoice";
 import { prettyModelLabel, useProviderInfo } from "@/hooks/useProviderInfo";
@@ -55,6 +55,7 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
   const settingsLabel = claudeModelBadgeLabel(list, claudeModelId);
   // Only a live list can say a model is gone; Claude Code's aliases don't list pinned ids.
   const retired =
+    isClaude &&
     overridden && modelList?.live === true && findClaudeModel(list, nodeModel) === undefined;
   const activeValue = !isClaude || nodeModel === undefined
     ? undefined
@@ -67,6 +68,9 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
       ...(isClaude ? {} : { serviceTier: undefined }),
     });
   };
+
+  const refused =
+    !isClaude && ownProviderModel !== undefined && isFailed(checks, effectiveProvider, ownProviderModel);
 
   const claudeRow = (model: (typeof list)[number], close: () => void) => (
     <ModelOption
@@ -84,7 +88,7 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
   return (
     <BadgePopover
       side={popoverSide}
-      title={`Model: ${label}${retired ? " (no longer offered by Claude Code)" : overridden ? " (node override)" : " (Settings)"} · click to change`}
+      title={`Model: ${label}${retired ? " (no longer offered by Claude Code)" : refused ? " (refused by your plan)" : overridden ? " (node override)" : " (Settings)"} · click to change`}
       overridden={overridden}
       ariaHasPopup="listbox"
       panelClassName="w-[264px]"
@@ -107,6 +111,15 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
             Node model
           </div>
           <RefreshOnOpen />
+          {refused && (
+            <ModelOption
+              active
+              provider={effectiveProvider}
+              title={label}
+              subtitle="Your plan refused this model in the last check · pick another"
+              onSelect={close}
+            />
+          )}
           {retired && (
             <ModelOption
               active
