@@ -33,6 +33,11 @@ export function PowerBadge({ nodeId, popoverSide }: Props) {
   const configuredEffort = useCanvasStore(
     (s) => s.providerConfigs?.codex?.reasoningEffort,
   );
+  const nodeModel = useCanvasStore((s) =>
+    s.nodes[nodeId]?.data.nodeSettings?.provider === "codex"
+      ? s.nodes[nodeId]?.data.nodeSettings?.model
+      : undefined,
+  );
   const setNodeSettings = useCanvasStore((s) => s.setNodeSettings);
   const [runtimeModel, setRuntimeModel] = useState<CodexModelInfo | undefined>();
 
@@ -43,7 +48,7 @@ export function PowerBadge({ nodeId, popoverSide }: Props) {
       .codexRuntime()
       .then((runtime) => {
         if (cancelled) return;
-        const modelId = configuredModel ?? runtime.defaultModelId;
+        const modelId = nodeModel ?? configuredModel ?? runtime.defaultModelId;
         setRuntimeModel(runtime.models.find((model) => model.id === modelId));
       })
       .catch(() => {
@@ -52,7 +57,7 @@ export function PowerBadge({ nodeId, popoverSide }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [configuredModel, provider]);
+  }, [configuredModel, nodeModel, provider]);
 
   if (provider !== "codex") return null;
 

@@ -168,18 +168,11 @@ export function SettingsModal({ open, onClose }: Props) {
                   providers
                 </h3>
                 <p className="mb-2.5 text-[11px] text-muted-foreground">
-                  Click to set the default provider for new canvases.
+                  Sign in to the providers you want. Each node picks its own model from any of them.
                 </p>
-                <div className="grid grid-cols-3 gap-1.5 items-start">
+                <div className="grid grid-cols-2 gap-1.5 items-start">
                   {PROVIDERS.map((p) => (
-                    <ProviderRow
-                      key={p}
-                      provider={p}
-                      isDefault={(settings.defaultProvider ?? "claude") === p}
-                      onMakeDefault={() =>
-                        setSettings((s) => ({ ...s, defaultProvider: p }))
-                      }
-                    />
+                    <ProviderRow key={p} provider={p} />
                   ))}
                 </div>
               </div>

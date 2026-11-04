@@ -70,7 +70,7 @@ export function useProviderInfo(canvasProvider?: Provider): ProviderInfoState {
   return { provider, label: labelsByProvider[provider], labelsByProvider, claudeModelId };
 }
 
-function prettyModelLabel(provider: Provider, modelId?: string): string {
+export function prettyModelLabel(provider: Provider, modelId?: string): string {
   if (provider === "claude") {
     return modelId ? claudeModelLabel(modelId) : "Default";
   }

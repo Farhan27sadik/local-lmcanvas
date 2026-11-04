@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Brain, Check, ChevronDown } from "lucide-react";
-import clsx from "clsx";
-import type { CanvasNode, KimiModelInfo, NodeId } from "@shared/types";
+import { useMemo } from "react";
+import { Brain, ChevronDown } from "lucide-react";
+import type { CanvasNode, NodeId } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
 import { nodeModelPatch } from "@/lib/claudeModelChoice";
-import { useProviderInfo } from "@/hooks/useProviderInfo";
+import { prettyModelLabel, useProviderInfo } from "@/hooks/useProviderInfo";
 import { useClaudeModelList, useRefreshClaudeModelsOnMount } from "@/hooks/useClaudeModels";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { claudeModelBadgeLabel } from "@/lib/modelLabel";
+import { ModelOption } from "./ModelOption";
+import { OtherProviderModels } from "./OtherProviderModels";
 import { ProviderLogo } from "./ProviderLogo";
 import { BadgePopover } from "./BadgePopover";
 
@@ -34,12 +35,15 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
   const usage = useMemo(() => aggregateClaudeUsage(nodes), [nodes]);
 
   const isClaude = effectiveProvider === "claude";
-  const isKimi = effectiveProvider === "kimi";
-  const overridden = (isClaude || isKimi) && nodeModel !== undefined;
+  // A non-Claude node's own model counts only when the node chose that provider itself.
+  const ownProviderModel = useCanvasStore((s) =>
+    s.nodes[nodeId]?.data.nodeSettings?.provider === effectiveProvider ? nodeModel : undefined,
+  );
+  const overridden = isClaude ? nodeModel !== undefined : ownProviderModel !== undefined;
   const label = isClaude
     ? claudeModelBadgeLabel(list, nodeModel ?? claudeModelId)
-    : isKimi && nodeModel
-      ? nodeModel.replace(/^kimi-code\//, "")
+    : ownProviderModel
+      ? prettyModelLabel(effectiveProvider, ownProviderModel)
       : providerLabel;
   const settingsLabel = claudeModelBadgeLabel(list, claudeModelId);
   // Only a live list can say a model is gone; Claude Code's aliases don't list pinned ids.
@@ -50,10 +54,11 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
     : (findClaudeModel(list, nodeModel)?.value ?? nodeModel);
 
   const choose = (model: string | undefined): void => {
-    setNodeSettings(
-      nodeId,
-      nodeModelPatch({ models: list, model, settingsModel: claudeModelId, isClaude, storedEffort }),
-    );
+    setNodeSettings(nodeId, {
+      ...nodeModelPatch({ models: list, model, settingsModel: claudeModelId, isClaude, storedEffort }),
+      // A Codex tier left on the node would come back if it later switched to Codex again.
+      ...(isClaude ? {} : { serviceTier: undefined }),
+    });
   };
 
   return (
@@ -114,13 +119,7 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
               }}
             />
           ))}
-          <KimiModelOptions
-            activeModel={isKimi ? nodeModel : undefined}
-            onSelect={(model) => {
-              setNodeSettings(nodeId, { provider: "kimi", model, reasoningEffort: undefined });
-              close();
-            }}
-          />
+          <OtherProviderModels nodeId={nodeId} close={close} />
           <div className="mt-1 border-t border-border px-2.5 pt-1.5 text-[9px] text-muted-foreground">
             This canvas: {formatUsage(usage)}
           </div>
@@ -130,72 +129,10 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
   );
 }
 
-/** The models in the user's Kimi config; nothing is shown when Kimi isn't set up. Mounted with the picker. */
-function KimiModelOptions({
-  activeModel,
-  onSelect,
-}: {
-  activeModel: string | undefined;
-  onSelect: (model: string) => void;
-}) {
-  const [models, setModels] = useState<KimiModelInfo[]>([]);
-  useEffect(() => {
-    void window.api.providers
-      .kimiModels()
-      .then(setModels)
-      .catch(() => setModels([]));
-  }, []);
-  if (models.length === 0) return null;
-  return (
-    <>
-      <div
-        className="mt-1 flex items-center gap-1.5 border-t border-border px-2.5 pt-2 pb-1 text-[8px] uppercase tracking-[0.14em] text-muted-foreground"
-        style={{ fontFamily: "var(--font-geist-mono)" }}
-      >
-        <ProviderLogo provider="kimi" size={9} />
-        Kimi
-      </div>
-      {models.map((model) => (
-        <ModelOption
-          key={model.id}
-          active={activeModel === model.id}
-          title={model.displayName}
-          subtitle={model.contextSize ? `${Math.round(model.contextSize / 1024)}K context · ${model.id}` : model.id}
-          onSelect={() => onSelect(model.id)}
-        />
-      ))}
-    </>
-  );
-}
-
 /** Mounted only while the picker is open: asks for the latest list right away. */
 function RefreshOnOpen(): null {
   useRefreshClaudeModelsOnMount();
   return null;
-}
-
-type ModelOptionProps = { active: boolean; title: string; subtitle: string; onSelect: () => void };
-
-function ModelOption({ active, title, subtitle, onSelect }: ModelOptionProps) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={active}
-      onClick={onSelect}
-      className={clsx(
-        "w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-[11px] transition-colors cursor-pointer",
-        active ? "bg-accent/15 text-foreground" : "text-foreground hover:bg-muted",
-      )}
-    >
-      <ProviderLogo provider="claude" size={12} />
-      <span className="flex-1 min-w-0">
-        <span className="block truncate">{title}</span>
-        {subtitle && <span className="block truncate text-[9px] text-muted-foreground">{subtitle}</span>}
-      </span>
-      {active && <Check className="h-3 w-3 text-foreground/70" />}
-    </button>
-  );
 }
 
 function aggregateClaudeUsage(nodes: Record<string, CanvasNode>): ClaudeUsageTotals {
