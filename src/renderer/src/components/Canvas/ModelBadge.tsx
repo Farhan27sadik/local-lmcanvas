@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Brain, Check, ChevronDown } from "lucide-react";
 import clsx from "clsx";
-import type { CanvasNode, NodeId } from "@shared/types";
+import type { CanvasNode, KimiModelInfo, NodeId } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
 import { nodeModelPatch } from "@/lib/claudeModelChoice";
 import { useProviderInfo } from "@/hooks/useProviderInfo";
@@ -34,8 +34,13 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
   const usage = useMemo(() => aggregateClaudeUsage(nodes), [nodes]);
 
   const isClaude = effectiveProvider === "claude";
-  const overridden = isClaude && nodeModel !== undefined;
-  const label = isClaude ? claudeModelBadgeLabel(list, nodeModel ?? claudeModelId) : providerLabel;
+  const isKimi = effectiveProvider === "kimi";
+  const overridden = (isClaude || isKimi) && nodeModel !== undefined;
+  const label = isClaude
+    ? claudeModelBadgeLabel(list, nodeModel ?? claudeModelId)
+    : isKimi && nodeModel
+      ? nodeModel.replace(/^kimi-code\//, "")
+      : providerLabel;
   const settingsLabel = claudeModelBadgeLabel(list, claudeModelId);
   // Only a live list can say a model is gone; Claude Code's aliases don't list pinned ids.
   const retired =
@@ -69,7 +74,7 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
     >
       {({ close }) => (
         // `nowheel` lets the list scroll instead of the canvas panning under it.
-        <div role="listbox" aria-label="Claude model" className="nowheel max-h-[340px] overflow-y-auto pb-1">
+        <div role="listbox" aria-label="Model" className="nowheel max-h-[340px] overflow-y-auto pb-1">
           <div
             className="px-2.5 pt-2 pb-1 text-[8px] uppercase tracking-[0.14em] text-muted-foreground"
             style={{ fontFamily: "var(--font-geist-mono)" }}
@@ -109,12 +114,57 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
               }}
             />
           ))}
+          <KimiModelOptions
+            activeModel={isKimi ? nodeModel : undefined}
+            onSelect={(model) => {
+              setNodeSettings(nodeId, { provider: "kimi", model, reasoningEffort: undefined });
+              close();
+            }}
+          />
           <div className="mt-1 border-t border-border px-2.5 pt-1.5 text-[9px] text-muted-foreground">
             This canvas: {formatUsage(usage)}
           </div>
         </div>
       )}
     </BadgePopover>
+  );
+}
+
+/** The models in the user's Kimi config; nothing is shown when Kimi isn't set up. Mounted with the picker. */
+function KimiModelOptions({
+  activeModel,
+  onSelect,
+}: {
+  activeModel: string | undefined;
+  onSelect: (model: string) => void;
+}) {
+  const [models, setModels] = useState<KimiModelInfo[]>([]);
+  useEffect(() => {
+    void window.api.providers
+      .kimiModels()
+      .then(setModels)
+      .catch(() => setModels([]));
+  }, []);
+  if (models.length === 0) return null;
+  return (
+    <>
+      <div
+        className="mt-1 flex items-center gap-1.5 border-t border-border px-2.5 pt-2 pb-1 text-[8px] uppercase tracking-[0.14em] text-muted-foreground"
+        style={{ fontFamily: "var(--font-geist-mono)" }}
+      >
+        <ProviderLogo provider="kimi" size={9} />
+        Kimi
+      </div>
+      {models.map((model) => (
+        <ModelOption
+          key={model.id}
+          active={activeModel === model.id}
+          title={model.displayName}
+          subtitle={model.contextSize ? `${Math.round(model.contextSize / 1024)}K context · ${model.id}` : model.id}
+          onSelect={() => onSelect(model.id)}
+        />
+      ))}
+    </>
   );
 }
 
