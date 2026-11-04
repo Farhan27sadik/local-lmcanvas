@@ -25,6 +25,7 @@ import { useCenterOnNode } from "@/hooks/useCenterOnNode";
 import { FALLBACK_NODE_HEIGHT, NODE_WIDTH } from "@/lib/canvasConstants";
 import { useRegisterPaneStore } from "@/hooks/usePaneRegistry";
 import { useBranchRequestStore } from "@/hooks/useBranchRequestStore";
+import { useCompareStore } from "@/hooks/useCompareStore";
 import { useBranchFromNode } from "@/hooks/useBranchFromNode";
 import { findMessageTextViewportY } from "@/lib/nodeDom";
 import { saveErrorText } from "@/lib/saveRetry";
@@ -299,6 +300,7 @@ function BranchRequestListener({ paneId }: { paneId: string }) {
   const pending = useBranchRequestStore((s) => s.pending);
   const consume = useBranchRequestStore((s) => s.consume);
   const setSelectedNodeId = useCanvasStore((s) => s.setSelectedNodeId);
+  const setCompareTargets = useCompareStore((s) => s.set);
 
   const matches = pending?.paneId === paneId;
   const parentId = matches ? pending!.parentId : "";
@@ -328,10 +330,12 @@ function BranchRequestListener({ paneId }: { paneId: string }) {
         // Move canvas selection onto the new child so the drawer
         // auto-switches to it and keeps streaming visible.
         setSelectedNodeId(childId);
+        // The child submits itself; it finds these when it does.
+        if (pending.compareTargets?.length) setCompareTargets(childId, pending.compareTargets);
       },
     });
     consume(requestId);
-  }, [pending, matches, parentId, branch, consume, setSelectedNodeId]);
+  }, [pending, matches, parentId, branch, consume, setSelectedNodeId, setCompareTargets]);
 
   return null;
 }

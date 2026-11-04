@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Attachment } from "@shared/ipc";
+import type { CompareTarget } from "@/lib/compareTargets";
 
 export type BranchRequest = {
   /** Pane that owns the parent node — only that pane consumes the request. */
@@ -7,6 +8,8 @@ export type BranchRequest = {
   parentId: string;
   prefill?: string;
   attachments?: Attachment[];
+  /** Extra models the new node's prompt also goes to (see useCompareSubmit). */
+  compareTargets?: CompareTarget[];
   addedContext?: string;
   selectionMessageId?: string;
   /** Unique id per emit so consumers can detect new requests via id change. */
