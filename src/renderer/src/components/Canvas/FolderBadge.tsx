@@ -92,6 +92,15 @@ export function FolderBadge({ nodeId, popoverSide }: Props) {
             close();
           }}
           onRemove={removeRecentFolder}
+          onClear={
+            overridden
+              ? () => {
+                  // Also resets the folder new nodes start with, which copies the last change.
+                  setNodeSettings(nodeId, { cwd: undefined });
+                  close();
+                }
+              : undefined
+          }
         />
       )}
     </BadgePopover>
@@ -105,6 +114,8 @@ type FolderPickerProps = {
   onApply: (folder: string) => void;
   onPick: () => Promise<void>;
   onRemove: (folder: string) => void;
+  /** Present when the node has a folder of its own: drops it so the canvas default applies. */
+  onClear?: () => void;
 };
 
 function FolderPicker({
@@ -114,6 +125,7 @@ function FolderPicker({
   onApply,
   onPick,
   onRemove,
+  onClear,
 }: FolderPickerProps) {
   const [query, setQuery] = useState("");
   const [removePath, setRemovePath] = useState<string | null>(null);
@@ -255,6 +267,16 @@ function FolderPicker({
       )}
 
       <div className="mt-1 border-t border-border pt-1">
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="flex w-full items-center gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+          >
+            <X className="w-3 h-3" />
+            Clear folder
+          </button>
+        )}
         <button
           type="button"
           onClick={() => void onPick()}
