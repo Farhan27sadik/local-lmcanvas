@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { RotateCcw } from "lucide-react";
+import { Pencil, RotateCcw } from "lucide-react";
 
 /** Sends the node's prompt again for a fresh answer. `confirming` is the second-click state shown
  *  when other nodes branch from the answer it would replace. */
@@ -24,6 +24,25 @@ export function NodeRegenerateButton({ onClick, confirming }: { onClick: () => v
       ) : (
         <RotateCcw className="h-[7px] w-[7px]" />
       )}
+    </button>
+  );
+}
+
+/** Opens the prompt for editing; sending it replaces the answer, like Regenerate but with new words. */
+export function NodeEditPromptButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="flex h-5 min-w-5 items-center justify-center rounded-md px-1 transition-all duration-200 cursor-pointer bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+      aria-label="Edit prompt and regenerate"
+      title="Edit prompt and regenerate"
+    >
+      <Pencil className="h-[7px] w-[7px]" />
     </button>
   );
 }
