@@ -1,4 +1,8 @@
 import { listKimiModels } from "./agents/kimiModels";
+import { splitClaudeModels } from "@shared/modelCatalog";
+import { applyModelChecks, runModelChecks, type Candidate } from "./modelCheck";
+import { createProbe } from "./modelProbes";
+import { readModelChecks, writeModelChecks } from "./storage/modelChecks";
 import { app, BrowserWindow, ipcMain, Menu, MenuItem, nativeImage, powerSaveBlocker, shell, dialog } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -71,7 +75,7 @@ import type {
   GenerateGroupSummaryRequest,
   SlashItem,
 } from "@shared/ipc";
-import type { AppSettings, Canvas, Provider, ProviderSessionRef, ReasoningEffort } from "@shared/types";
+import type { AppSettings, Canvas, ModelCheckReport, Provider, ProviderSessionRef, ReasoningEffort } from "@shared/types";
 import { CANVAS_LOCKED_MESSAGE } from "@shared/canvasLock";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -654,13 +658,10 @@ function registerIpc(): void {
               models: listedModels,
             })
           : undefined;
-      // A node's own Kimi model counts only if it is an alias in the Kimi config: a Claude id left
-      // on the node by a provider switch must not reach `kimi -m`.
-      const nodeKimiModel =
-        provider === "kimi" && nodeSettings?.model
-          ? (await listKimiModels()).find((m) => m.id === nodeSettings.model)?.id
-          : undefined;
-      const model = claudeRun ? claudeRun.model : (nodeKimiModel ?? providerCfg?.model);
+      // A node's own model counts only when the node chose this provider itself: a model id left
+      // behind by a provider that came from the canvas or Settings must not reach another CLI.
+      const nodeOwnModel = nodeSettings?.provider === provider ? nodeSettings.model : undefined;
+      const model = claudeRun ? claudeRun.model : (nodeOwnModel ?? providerCfg?.model);
       const runModel = claudeRun?.resolvedModel ?? model;
 
       // Never fail on replay: a branch replayed without a Claude session is fitted to the window.
@@ -874,6 +875,44 @@ function registerIpc(): void {
   }, "shared");
 
   api.handle("providers:kimiModels", async () => listKimiModels(), "shared");
+
+  api.handle("providers:modelChecks", async () => readModelChecks(), "shared");
+
+  // One run at a time: pressing the button twice, or from two places, shares the run in flight.
+  let modelCheckRun: Promise<ModelCheckReport> | null = null;
+  api.handle(
+    "providers:checkModels",
+    async () => {
+      modelCheckRun ??= (async (): Promise<ModelCheckReport> => {
+        const settings = await readSettings();
+        const binOf = (p: Provider) => settings.providers?.[p]?.binPath || undefined;
+        const candidates: Candidate[] = [
+          ...splitClaudeModels((await claudeModels.list(claudeBinPathOf(settings))).models).latest.map((m) => ({
+            provider: "claude" as const,
+            model: m.value,
+          })),
+          ...(await getCodexRuntimeInfo(binOf("codex") ?? "codex").then(
+            (rt) => rt.models.map((m) => ({ provider: "codex" as const, model: m.id })),
+            () => [], // Codex isn't installed or signed in: nothing to check
+          )),
+          ...(await listKimiModels())
+            .filter((m) => m.latest)
+            .map((m) => ({ provider: "kimi" as const, model: m.id })),
+        ];
+        const results = await runModelChecks(
+          candidates,
+          createProbe({ claude: claudeBinPathOf(settings), codex: binOf("codex"), kimi: binOf("kimi") }),
+        );
+        const checks = applyModelChecks(await readModelChecks(), results, Date.now());
+        await writeModelChecks(checks);
+        return { results, checks };
+      })().finally(() => {
+        modelCheckRun = null;
+      });
+      return modelCheckRun;
+    },
+    "desktop-only",
+  );
 
   api.handle("providers:codexRuntime", async () => {
     const settings = await readSettings();

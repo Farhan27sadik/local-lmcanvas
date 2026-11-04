@@ -1,18 +1,13 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, Check, Loader2, Plug2, RotateCw } from "lucide-react";
-import clsx from "clsx";
+import { ArrowUpRight, Loader2, Plug2, RotateCw } from "lucide-react";
 import type { Provider } from "@shared/types";
 import { useProviderAuth } from "@/hooks/useProviderAuth";
 import { PROVIDER_INFO } from "@/components/Onboarding/providerInfo";
 import { ProviderLogo } from "@/components/Canvas/ProviderLogo";
 
-type Props = {
-  provider: Provider;
-  isDefault: boolean;
-  onMakeDefault: () => void;
-};
+type Props = { provider: Provider };
 
-export function ProviderRow({ provider, isDefault, onMakeDefault }: Props) {
+export function ProviderRow({ provider }: Props) {
   const info = PROVIDER_INFO[provider];
   const auth = useProviderAuth(provider);
 
@@ -30,40 +25,12 @@ export function ProviderRow({ provider, isDefault, onMakeDefault }: Props) {
   const stop = (e: React.MouseEvent | React.KeyboardEvent) => e.stopPropagation();
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-pressed={isDefault}
-      title={info.tagline}
-      onClick={onMakeDefault}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onMakeDefault();
-        }
-      }}
-      className={clsx(
-        "rounded-md border transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-foreground/30",
-        isDefault
-          ? "border-foreground/40 bg-foreground/[0.06]"
-          : "border-border bg-background hover:bg-muted/40"
-      )}
-    >
+    <div title={info.tagline} className="rounded-md border border-border bg-background">
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <ProviderLogo provider={provider} size={14} className="shrink-0" />
         <div className="min-w-0">
           <div className="text-xs font-medium text-foreground truncate">{info.name}</div>
         </div>
-        {isDefault && (
-          <motion.span
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 320, damping: 20 }}
-            className="inline-flex shrink-0"
-          >
-            <Check className="h-3 w-3 text-foreground/70" />
-          </motion.span>
-        )}
         <div className="ml-auto flex items-center shrink-0">
           {authenticated ? (
             <motion.button

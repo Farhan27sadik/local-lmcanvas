@@ -13,7 +13,7 @@ export type ProviderInfoState = {
 
 // Claude has no entry: with no model set, Claude Code picks its own default.
 const DEFAULT_MODEL_BY_PROVIDER: Record<Exclude<Provider, "claude">, string> = {
-  codex: "gpt-5.6-sol",
+  codex: "", // empty: Codex uses its own default
   cursor: "auto",
   kimi: "", // empty: let Kimi use its own default_model
 };
@@ -70,12 +70,12 @@ export function useProviderInfo(canvasProvider?: Provider): ProviderInfoState {
   return { provider, label: labelsByProvider[provider], labelsByProvider, claudeModelId };
 }
 
-function prettyModelLabel(provider: Provider, modelId?: string): string {
+export function prettyModelLabel(provider: Provider, modelId?: string): string {
   if (provider === "claude") {
     return modelId ? claudeModelLabel(modelId) : "Default";
   }
   if (provider === "codex") {
-    if (!modelId || modelId.length === 0) return "GPT-5.6 Sol";
+    if (!modelId || modelId.length === 0) return "Codex default";
     const lower = normalizeModelId(modelId);
     if (
       lower === "codex" ||

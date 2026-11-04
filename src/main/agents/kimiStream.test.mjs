@@ -40,17 +40,27 @@ provider = "managed:kimi-code"
 max_context_size = 262144
 capabilities = [ "thinking", "image_in", "tool_use" ]
 display_name = "K3"
-[models."kimi-code/text-only"]
-capabilities = [ "tool_use" ]
+[models."kimi-code/k3.1-pro"]
+display_name = "K3.1 Pro"
+[models."kimi-code/k3.1-pro-highspeed"]
+display_name = "K3.1 Pro Highspeed"
 [thinking]
 display_name = "not a model"
 `;
 
 test("models come from the [models.*] tables only", () => {
   const models = parseKimiModels(toml);
-  expect(models).toEqual([
-    { id: "kimi-code/k3", displayName: "K3", contextSize: 262144, imageInput: true },
-    { id: "kimi-code/text-only", displayName: "kimi-code/text-only", imageInput: false },
-  ]);
+  expect(models.map((m) => m.id)).toEqual(["kimi-code/k3", "kimi-code/k3.1-pro", "kimi-code/k3.1-pro-highspeed"]);
+  expect(models[0]).toMatchObject({ displayName: "K3", contextSize: 262144, imageInput: true });
   expect(JSON.stringify(models)).not.toContain("SECRET");
+});
+
+test("the default model and its variants are the latest; the rest are older", () => {
+  const latest = Object.fromEntries(parseKimiModels(toml).map((m) => [m.id, m.latest]));
+  expect(latest).toEqual({ "kimi-code/k3": false, "kimi-code/k3.1-pro": true, "kimi-code/k3.1-pro-highspeed": true });
+});
+
+test("with no default_model, every model counts as latest", () => {
+  const models = parseKimiModels(toml.replace(/^default_model.*$/m, ""));
+  expect(models.every((m) => m.latest)).toBe(true);
 });

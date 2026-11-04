@@ -10,6 +10,7 @@ function getHomeDir(): string {
 export const ROOT_DIR = join(getHomeDir(), ".local-lmcanvas");
 export const CANVASES_DIR = join(ROOT_DIR, "canvases");
 export const SETTINGS_FILE = join(ROOT_DIR, "settings.json");
+export const MODEL_CHECKS_FILE = join(ROOT_DIR, "model-checks.json");
 
 export async function ensureDirs(): Promise<void> {
   await mkdir(CANVASES_DIR, { recursive: true });

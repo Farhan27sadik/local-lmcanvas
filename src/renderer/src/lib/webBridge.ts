@@ -370,6 +370,8 @@ export function createWebApi(deps: WebBridgeDeps): LmcApi {
       codexRuntime: () => call("providers:codexRuntime"),
       claudeModels: () => call("providers:claudeModels"),
       kimiModels: () => call("providers:kimiModels"),
+      modelChecks: () => call("providers:modelChecks"),
+      checkModels: () => call("providers:checkModels"),
     },
     askUser: {
       onRequest: (handler) => subscribe("askUser:request", handler),
