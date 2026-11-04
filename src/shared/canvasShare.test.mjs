@@ -159,6 +159,15 @@ describe("toShareFile", () => {
     expect(replyTexts).toContain(`**Question:** ${ASK}\n**Answer:** New to ML`);
   });
 
+  test("export keeps the model a reply ran on, and omits it when it was never recorded", () => {
+    const c = canvas();
+    const root = c.nodes.find((n) => n.id === "root");
+    root.data.chat.messages.find((m) => m.id === "a1").model = "claude-opus-5-5";
+    const file = toShareFile(c, 99);
+    expect(message(file, "root", "a1").model).toBe("claude-opus-5-5");
+    expect(message(file, "kid", "a2")).not.toHaveProperty("model");
+  });
+
   test("export replaces error text and marks a streaming reply interrupted", () => {
     const file = toShareFile(canvas(), 99);
     expect(message(file, "kid", "a2")).toMatchObject({ status: "error", error: "This reply failed." });

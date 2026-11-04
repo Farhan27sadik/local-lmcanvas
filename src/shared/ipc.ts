@@ -125,6 +125,7 @@ export type CompactResult = {
 
 export type ChatEvent =
   | { chatId: string; type: "start" }
+  | { chatId: string; type: "model"; model: string }
   | { chatId: string; type: "response_complete" }
   | ({ chatId: string; type: "model_fallback" } & ModelFallback)
   | { chatId: string; type: "session"; session: ProviderSessionRef }

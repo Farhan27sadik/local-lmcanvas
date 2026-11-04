@@ -15,6 +15,7 @@ import { ToolGroupView } from "./blocks/ToolGroupView";
 import { ThinkingView } from "./blocks/ThinkingView";
 import { ImagePreviewModal } from "./ImagePreviewModal";
 import { ErrorBlock } from "./ErrorBlock";
+import { ReplyMeta } from "./ReplyMeta";
 import { pickSuggestionIcons } from "@/lib/suggestionIcon";
 import { claudeModelLabel } from "@/lib/modelLabel";
 import { compactionText } from "@shared/contextSize";
@@ -205,6 +206,8 @@ export function NodeResponse({
       )}
 
       {isError && message.error && <ErrorBlock message={message} />}
+
+      {!isStreaming && <ReplyMeta message={message} />}
 
       {message.suggestions && message.suggestions.length > 0 && onSuggestionClick && (
         <SuggestionButtons

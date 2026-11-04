@@ -177,6 +177,7 @@ export type CanvasStoreState = {
     isError: boolean
   ) => void;
   setMessageUsage: (nodeId: NodeId, messageId: string, usage?: UsageSummary) => void;
+  setMessageModel: (nodeId: NodeId, messageId: string, model: string) => void;
   setMessageModelFallback: (
     nodeId: NodeId,
     messageId: string,
@@ -1104,6 +1105,16 @@ export function createCanvasStoreApi(): CanvasStoreApi {
         set((s) => {
           const nodes = updateMessages(s.nodes, nodeId, (messages) =>
             mapMessage(messages, messageId, (m) => ({ ...m, usage })),
+          );
+          return nodes ? { nodes } : s;
+        });
+        get().markDirty();
+      },
+
+      setMessageModel: (nodeId, messageId, model) => {
+        set((s) => {
+          const nodes = updateMessages(s.nodes, nodeId, (messages) =>
+            mapMessage(messages, messageId, (m) => ({ ...m, model })),
           );
           return nodes ? { nodes } : s;
         });

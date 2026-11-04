@@ -175,6 +175,8 @@ export function migrateMessage(raw: unknown): Message | null {
     blocks,
     createdAt: typeof obj.createdAt === "number" ? obj.createdAt : Date.now(),
     provider,
+    // Capped: an imported file is someone else's text.
+    model: typeof obj.model === "string" ? obj.model.slice(0, 120) : undefined,
     usage,
     status,
     error: typeof obj.error === "string" ? obj.error : undefined,

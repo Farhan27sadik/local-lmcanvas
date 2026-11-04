@@ -224,6 +224,9 @@ export function useNodeChat(nodeId: NodeId) {
         switch (ev.type) {
           case "start":
             return;
+          case "model":
+            s.setMessageModel(nodeId, asstMsgId, ev.model);
+            return;
           case "response_complete":
             completeVisibleResponse();
             return;

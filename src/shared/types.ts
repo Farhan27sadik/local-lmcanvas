@@ -90,6 +90,9 @@ export type Message = {
   createdAt: number;
   /** Provider that generated this assistant message. */
   provider?: Provider;
+  /** The model this reply ran on; "" when the provider chose its own default. Missing on replies
+   *  from before it was recorded. */
+  model?: string;
   /** Per-message token/cost usage, when reported by the provider CLI. */
   usage?: UsageSummary;
   status?: MessageStatus;
