@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { shell as electronShell } from "electron";
 import { writeAttachmentsToTemp } from "./attachmentTempFiles";
+import { codexContext } from "./contextSnapshots";
 import { codexPolicy } from "./codexPolicy";
 import {
   CodexAppServerClient,
@@ -11,6 +12,7 @@ import { requestAnswer } from "../claude/askUserBridge";
 import type {
   CodexModelInfo,
   CodexRuntimeInfo,
+  ContextSnapshot,
   ReasoningEffort,
   UsageSummary,
 } from "@shared/types";
@@ -257,6 +259,7 @@ async function runCodexTurn({
   let settled = false;
   let firstDeltaSeen = false;
   let lastUsage: JsonObject | undefined;
+  let lastContext: ContextSnapshot | undefined;
   const agentDeltaItems = new Set<string>();
   const planDeltaItems = new Set<string>();
   const reasoningDeltaItems = new Set<string>();
@@ -391,6 +394,7 @@ async function runCodexTurn({
       if (method === "thread/tokenUsage/updated") {
         const usageValue = asObject(asObject(params.tokenUsage)?.last);
         if (usageValue) lastUsage = usageValue;
+        lastContext = codexContext(params.tokenUsage) ?? lastContext;
         return;
       }
 
@@ -430,6 +434,7 @@ async function runCodexTurn({
           emit({ kind: "error", message });
           emit({ kind: "done", isError: true, result: message });
         } else {
+          if (lastContext) emit({ kind: "context", context: lastContext });
           emit({
             kind: "done",
             isError: status === "interrupted",

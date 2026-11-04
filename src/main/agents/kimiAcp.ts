@@ -8,6 +8,8 @@ import { acpUpdateEvents, permissionOutcome, permissionQuestion } from "./kimiAc
 import { composePromptWithSystem, errorMessage, isAuthError, type RunAgentOpts, type RunnerEvent } from "./types";
 
 const CANCEL_GRACE_MS = 2000;
+/** How long after a reply to wait for Kimi's size report (it arrived ~0.1 s after in a probe). */
+const SIZE_WAIT_MS = 500;
 
 const sessionIdOf = (result: unknown): string => {
   const id = (result as { sessionId?: unknown } | undefined)?.sessionId;
@@ -57,10 +59,16 @@ export async function runKimiAcp(prompt: string, opts: RunAgentOpts): Promise<vo
     child.stdin.on("error", () => undefined); // a dead agent is reported through `close` below
 
     let sessionId: string | undefined;
+    // Kimi reports the session's size just after the prompt's result; `done` waits briefly for it.
+    let sizeReported: () => void = () => undefined;
+    const sizeArrived = new Promise<void>((resolve) => (sizeReported = resolve));
     const rpc = createRpc((text) => child.stdin.write(`${text}\n`), {
       onNotification: (method, params) => {
         const update = (params as { update?: unknown } | undefined)?.update;
-        if (method === "session/update") acpUpdateEvents(update).forEach(emit);
+        if (method !== "session/update") return;
+        const events = acpUpdateEvents(update);
+        events.forEach(emit);
+        if (events.some((ev) => ev.kind === "context")) sizeReported();
       },
       onRequest: async (method, params) => {
         if (method !== "session/request_permission") throw new Error(`Unsupported request: ${method}`);
@@ -111,6 +119,7 @@ export async function runKimiAcp(prompt: string, opts: RunAgentOpts): Promise<vo
     // The system prompt rides along only on a fresh session; a resumed one already has it.
     const text = fresh ? composePromptWithSystem(prompt, opts.systemPrompt) : prompt;
     await rpc.call("session/prompt", { sessionId, prompt: [{ type: "text", text }] });
+    await Promise.race([sizeArrived, new Promise<void>((resolve) => setTimeout(resolve, SIZE_WAIT_MS).unref())]);
     emit({ kind: "done", isError: false });
   } catch (err) {
     if (opts.signal?.aborted) {

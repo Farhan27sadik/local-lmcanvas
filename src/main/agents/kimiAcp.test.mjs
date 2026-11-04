@@ -54,6 +54,8 @@ function handle(m) {
     update({ sessionUpdate: "tool_call_update", toolCallId: "t1", status: chosen === "reject" ? "failed" : "completed", rawOutput: "out" });
     update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: JSON.stringify({ seen, chosen, promptText }) } });
     send({ id: promptRequest, result: { stopReason: "end_turn" } });
+    // Real Kimi reports the session size just after the result.
+    if (promptText.includes("with usage")) setTimeout(() => update({ sessionUpdate: "usage_update", used: 15164, size: 262144 }), 50);
   }
 }
 `,
@@ -74,11 +76,11 @@ function fakeClient() {
   return client;
 }
 
-async function run(extra = {}, decision = "Allow once") {
+async function run(extra = {}, decision = "Allow once", prompt = "do it") {
   const client = fakeClient();
   client.decision = decision;
   const events = [];
-  await runKimiAcp("do it", { cwd: dir, binPath: fakeKimi, client, nodeId: "n1", onEvent: (e) => events.push(e), ...extra });
+  await runKimiAcp(prompt, { cwd: dir, binPath: fakeKimi, client, nodeId: "n1", onEvent: (e) => events.push(e), ...extra });
   const reply = events.filter((e) => e.kind === "text_delta").map((e) => e.text).join("");
   return { events, client, reply: reply ? JSON.parse(reply) : undefined };
 }
@@ -94,6 +96,13 @@ describe("runKimiAcp", () => {
     expect(events[0].session).toEqual({ provider: "kimi", id: "s-new" });
     expect(events.find((e) => e.kind === "tool_result")).toMatchObject({ toolUseId: "t1", isError: false });
     expect(events.at(-1)).toEqual({ kind: "done", isError: false });
+  });
+
+  test("waits for Kimi's size report and passes it on before finishing", async () => {
+    const { events } = await run({}, "Allow once", "do it with usage");
+    const kinds = events.map((e) => e.kind);
+    expect(kinds.slice(-3)).toEqual(["text_delta", "context", "done"]);
+    expect(events.find((e) => e.kind === "context").context).toMatchObject({ tokens: 15164, window: 262144, exact: true });
   });
 
   test("Deny tells Kimi to reject and the tool call ends as an error", async () => {
