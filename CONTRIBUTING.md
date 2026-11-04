@@ -17,7 +17,7 @@ bun install
 bun run dev
 ```
 
-This copy is the [xack20/local-lmcanvas](https://github.com/xack20/local-lmcanvas) fork. To work on it, clone the fork (its default branch is `local/model-labels`). The test, channel-scope and browser-adapter steps below apply to the fork only; upstream has none of those files.
+This copy is the [xack20/local-lmcanvas](https://github.com/xack20/local-lmcanvas) fork. To work on it, clone the fork (its default branch is `main`). The test, channel-scope and browser-adapter steps below apply to the fork only; upstream has none of those files.
 
 The Electron window opens automatically. DevTools opens with it in dev mode.
 
@@ -63,7 +63,15 @@ docs: clarify telemetry stance in README
 
 Keep subject lines under 72 characters. Multi-paragraph bodies are fine when the why isn't obvious from the diff.
 
-## Pull requests
+## Branches and pull requests
+
+`main` is the default branch. Never commit or push to it directly, and never force-push it: every change goes through a pull request.
+
+- Branch from an up-to-date `main` (`git switch main && git pull --ff-only && git switch -c <type>/<short-name>`). Use the commit types for the prefix, e.g. `fix/thread-order` or `docs/branch-workflow`.
+- Open the PR into `main` and fill in the template. Delete the branch once it is merged.
+- There are no automatic checks on PRs (CI runs on version tags only), so run `bun run typecheck` and the relevant tests yourself first.
+
+### What a PR should contain
 
 - One concern per PR. Two small PRs are better than one large one.
 - Link the issue you're fixing in the PR description.

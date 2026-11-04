@@ -2,13 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-`local-lmcanvas` — fully-local, canvas-based branching AI conversation tool (Electron + React + TypeScript). This is the xack20 fork; its default branch is `local/model-labels`.
+`local-lmcanvas` — fully-local, canvas-based branching AI conversation tool (Electron + React + TypeScript). This is the xack20 fork; its default branch is `main`.
 
 See [AGENTS.md](./AGENTS.md) for build commands, layout, conventions, and the four-place rule for adding channels. Read it first.
 
 Always run `bun run typecheck` before reporting work complete.
 
 Unit tests are `*.test.mjs` files run with Bun (`bun test src/shared/history.test.mjs` runs one). Run each file in its own `bun test <file>` process; never pass several files to one `bun test` invocation. `settings.test.mjs` redirects `HOME` and refuses to run once another file has loaded the storage modules. Tests import the `.ts` source directly by relative path (no `@shared`/`@/` aliases). There's no lint script.
+
+## Branches and pull requests
+
+`main` is the default branch. **Never commit or push to `main` directly, and never force-push it.** Every change reaches `main` through a pull request.
+
+- Start each piece of work from an up-to-date `main`: `git switch main && git pull --ff-only && git switch -c <type>/<short-name>`.
+- Name the branch `<type>/<short-name>`, with the same types as commit messages (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`), e.g. `fix/thread-order`.
+- Push the branch and open a PR into `main` (`gh pr create --base main`), filling in `.github/PULL_REQUEST_TEMPLATE.md`. Run `bun run typecheck` and the tests for the files you touched first: CI only runs on version tags, so a PR gets no automatic checks.
+- Don't merge your own PR unless asked, and don't commit or push unless asked. Delete the branch after it is merged.
+- To build and install for a test, build from the branch; the PR is how it reaches `main`.
+- Syncing with upstream goes the same way: branch from `main`, `git fetch upstream && git merge upstream/main`, PR.
 
 ## Architecture
 

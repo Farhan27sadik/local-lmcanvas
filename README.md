@@ -134,7 +134,8 @@ To pick up upstream changes:
 
 ```bash
 git remote add upstream https://github.com/max-lee-dev/local-lmcanvas.git   # once
-git fetch upstream && git merge upstream/main                                # on local/model-labels
+git switch main && git pull --ff-only && git switch -c chore/sync-upstream    # never merge into main directly
+git fetch upstream && git merge upstream/main                                 # then open a PR into main
 ```
 
 Then rebuild. `upstream/main` is the release line this fork is based on.
