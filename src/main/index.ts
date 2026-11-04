@@ -663,6 +663,8 @@ function registerIpc(): void {
       const nodeOwnModel = nodeSettings?.provider === provider ? nodeSettings.model : undefined;
       const model = claudeRun ? claudeRun.model : (nodeOwnModel ?? providerCfg?.model);
       const runModel = claudeRun?.resolvedModel ?? model;
+      // So the reply can say which model wrote it ("" = the provider's own default).
+      send({ chatId, type: "model", model: runModel ?? "" });
 
       // Never fail on replay: a branch replayed without a Claude session is fitted to the window.
       if (provider === "claude" && !compatibleCurrentSession && !compatibleParentSession) {

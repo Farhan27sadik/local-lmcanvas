@@ -125,6 +125,7 @@ function shareMessage(m: Message): Message {
     createdAt: m.createdAt,
     blocks: m.blocks.flatMap(shareBlock),
     ...(m.provider ? { provider: m.provider } : {}),
+    ...(m.model !== undefined ? { model: m.model } : {}),
     ...(m.suggestions ? { suggestions: m.suggestions } : {}),
     ...(m.status ? { status: interrupted ? "error" : m.status } : {}),
     // Raw errors are exception text and stderr, which carry folder paths and account details.

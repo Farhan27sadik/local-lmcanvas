@@ -40,3 +40,19 @@ describe("migrateMessage", () => {
     expect(migrateMessage(reply({}))?.imported).toBeUndefined();
   });
 });
+
+describe("the model a reply ran on", () => {
+  test("is kept, including the empty string that means the provider's default", () => {
+    expect(migrateMessage(reply({ model: "claude-opus-5-5" })).model).toBe("claude-opus-5-5");
+    expect(migrateMessage(reply({ model: "" })).model).toBe("");
+  });
+
+  test("is missing on replies from before it was recorded, and a non-string is dropped", () => {
+    expect(migrateMessage(reply({})).model).toBeUndefined();
+    expect(migrateMessage(reply({ model: 42 })).model).toBeUndefined();
+  });
+
+  test("is capped, because an imported file is someone else's text", () => {
+    expect(migrateMessage(reply({ model: "x".repeat(500) })).model).toHaveLength(120);
+  });
+});
