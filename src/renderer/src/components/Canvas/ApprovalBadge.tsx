@@ -7,14 +7,14 @@ type Props = { nodeId: NodeId };
 
 /**
  * Toggle for per-node approval: when on, the agent stops for your OK before commands and edits.
- * Cursor and Kimi can't ask, so the badge only shows for Claude and Codex.
+ * Cursor can't ask, so the badge is hidden on Cursor nodes.
  */
 export function ApprovalBadge({ nodeId }: Props) {
   const provider = useCanvasStore((s) => s.getEffectiveProvider(nodeId));
   const asking = useCanvasStore((s) => s.nodes[nodeId]?.data.nodeSettings?.approval === "ask");
   const setNodeSettings = useCanvasStore((s) => s.setNodeSettings);
 
-  if (provider !== "claude" && provider !== "codex") return null;
+  if (provider === "cursor") return null;
 
   return (
     <div className="nodrag relative">
