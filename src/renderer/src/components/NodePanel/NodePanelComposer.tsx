@@ -33,6 +33,7 @@ import { ClaudeEffortBadge } from "@/components/Canvas/ClaudeEffortBadge";
 import { ContextBadge } from "@/components/Canvas/ContextBadge";
 import { BranchBadge } from "@/components/Canvas/BranchBadge";
 import { PlanBadge } from "@/components/Canvas/PlanBadge";
+import { ApprovalBadge } from "@/components/Canvas/ApprovalBadge";
 import {
   filesToImageAttachments,
   imageFilesFromClipboard,
@@ -289,6 +290,7 @@ export function NodePanelComposer({
           <BranchBadge nodeId={parentId} popoverSide="top" />
           <FastBadge nodeId={parentId} />
           <PlanBadge nodeId={parentId} />
+          <ApprovalBadge nodeId={parentId} />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

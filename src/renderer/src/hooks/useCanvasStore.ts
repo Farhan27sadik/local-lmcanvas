@@ -246,6 +246,7 @@ function hasNodeSettings(settings: NodeSettings): boolean {
     settings.cwd !== undefined ||
     settings.branch !== undefined ||
     settings.planMode !== undefined ||
+    settings.approval !== undefined ||
     settings.chatOnly !== undefined ||
     settings.model !== undefined ||
     settings.reasoningEffort !== undefined ||
@@ -750,6 +751,7 @@ export function createCanvasStoreApi(): CanvasStoreApi {
             else if (key === "cwd") merged.cwd = value as string;
             else if (key === "branch") merged.branch = value as string;
             else if (key === "planMode") merged.planMode = value as boolean;
+            else if (key === "approval") merged.approval = value as NodeSettings["approval"];
             else if (key === "chatOnly") merged.chatOnly = value as boolean;
             else if (key === "model") merged.model = value as string;
             else if (key === "reasoningEffort") {

@@ -52,6 +52,7 @@ function sameNodeSettings(
     a.cwd === b.cwd &&
     a.branch === b.branch &&
     a.planMode === b.planMode &&
+    a.approval === b.approval &&
     a.chatOnly === b.chatOnly &&
     a.model === b.model &&
     a.reasoningEffort === b.reasoningEffort &&
@@ -65,6 +66,7 @@ function hasNodeSettings(settings: NodeSettings): boolean {
     settings.cwd !== undefined ||
     settings.branch !== undefined ||
     settings.planMode !== undefined ||
+    settings.approval !== undefined ||
     settings.chatOnly !== undefined ||
     settings.model !== undefined ||
     settings.reasoningEffort !== undefined ||

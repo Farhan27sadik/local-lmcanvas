@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { shell as electronShell } from "electron";
 import { writeAttachmentsToTemp } from "./attachmentTempFiles";
+import { codexPolicy } from "./codexPolicy";
 import {
   CodexAppServerClient,
   isThreadUnavailableError,
@@ -110,10 +111,11 @@ export async function runCodex(prompt: string, opts: RunAgentOpts): Promise<void
       elapsedMs: Date.now() - connectStartedAt,
     });
 
+    const policy = codexPolicy(opts.approval, opts.cwd);
     const threadConfig: JsonObject = {
       cwd: opts.cwd,
-      approvalPolicy: "never",
-      sandbox: "danger-full-access",
+      approvalPolicy: policy.approvalPolicy,
+      sandbox: policy.sandbox,
       ...(modelId ? { model: modelId } : {}),
       ...(opts.systemPrompt ? { developerInstructions: opts.systemPrompt } : {}),
       ...(resolvedServiceTier !== undefined
@@ -465,14 +467,15 @@ async function runCodexTurn({
     ...imagePaths.map((path) => ({ type: "localImage", path })),
   ];
   let turnResult: unknown;
+  const policy = codexPolicy(opts.approval, opts.cwd);
   try {
     turnResult = await client.requestWithOverloadRetry("turn/start", {
       threadId,
       input,
       clientUserMessageId: randomUUID(),
       cwd: opts.cwd,
-      approvalPolicy: "never",
-      sandboxPolicy: { type: "dangerFullAccess" },
+      approvalPolicy: policy.approvalPolicy,
+      sandboxPolicy: policy.sandboxPolicy,
       ...(modelId ? { model: modelId } : {}),
       ...(reasoningEffort ? { effort: reasoningEffort } : {}),
       ...(resolvedServiceTier !== undefined
