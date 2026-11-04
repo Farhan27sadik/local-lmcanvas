@@ -617,6 +617,7 @@ function registerIpc(): void {
           signal: attemptController.signal,
           planMode,
           chatOnly,
+          approval: nodeSettings?.approval,
           client,
           nodeId,
           onEvent: (ev) => {

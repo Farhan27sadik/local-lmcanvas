@@ -226,8 +226,13 @@ export type ClaudeModelInfo = {
 /** `live` is false when Claude Code couldn't be asked and `models` are its aliases. */
 export type ClaudeModelList = { models: ClaudeModelInfo[]; live: boolean };
 
+/** `auto` runs tools unattended (the default); `ask` stops for the user's OK first. */
+export type ApprovalMode = "ask" | "auto";
+
 export type NodeSettings = {
   provider?: Provider;
+  /** Ask before the agent runs commands or edits files. Claude and Codex; unset = auto. */
+  approval?: ApprovalMode;
   cwd?: string;
   /** Free-text branch label set by the user. No git detection. */
   branch?: string;

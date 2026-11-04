@@ -16,6 +16,7 @@ import { ContextBar } from "./ContextBar";
 import { CompactActions } from "./CompactActions";
 import { BranchBadge } from "./BranchBadge";
 import { PlanBadge } from "./PlanBadge";
+import { ApprovalBadge } from "./ApprovalBadge";
 import { OnboardingTitle } from "./OnboardingTitle";
 import { useNodeChat } from "@/hooks/useNodeChat";
 import type { CanvasNode, ImageBlock } from "@shared/types";
@@ -254,6 +255,7 @@ function CustomNodeImpl(props: NodeProps) {
           <BranchBadge nodeId={id} />
           <FastBadge nodeId={id} />
           <PlanBadge nodeId={id} />
+          <ApprovalBadge nodeId={id} />
           {isMergeNode && (
             <span
               className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"

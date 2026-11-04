@@ -101,7 +101,9 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import type { Client } from "../api/client";
 import type { Attachment } from "@shared/ipc";
-import { isClaudeEffort, type ProviderSessionRef, type ReasoningEffort, type UsageSummary } from "@shared/types";
+import { isClaudeEffort, type ApprovalMode, type ProviderSessionRef, type ReasoningEffort, type UsageSummary } from "@shared/types";
+import { requestAnswer } from "./askUserBridge";
+import { createToolApprover } from "./toolApproval";
 import { buildAskUserServer } from "./askUserMcp";
 import { findExecutable, pathFromEnv } from "./configuredBin";
 import {
@@ -156,6 +158,8 @@ export type RunClaudeOpts = {
   planMode?: boolean;
   /** When true, skip the claude_code preset and drop agent tools — fast pure-chat path. Ignored when planMode is also true. */
   chatOnly?: boolean;
+  /** `ask` stops for the user's OK before tools that change things; anything else runs unattended. */
+  approval?: ApprovalMode;
   parentSession?: ProviderSessionRef;
   currentSession?: ProviderSessionRef;
   client: Client;
@@ -224,6 +228,7 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
 
   // Plan mode forces the agent preset; chatOnly only kicks in for vanilla chat.
   const chatOnly = opts.chatOnly === true && !opts.planMode;
+  const ask = opts.approval === "ask" && !opts.planMode;
   const baseSystemPrompt = opts.systemPrompt ?? "";
   const askUserServer = chatOnly
     ? undefined
@@ -245,9 +250,19 @@ export async function runClaude(prompt: string, opts: RunClaudeOpts): Promise<vo
       options: {
         cwd: opts.cwd,
         // Plan mode: SDK disallows mutating tools and the model returns a plan.
-        // Default: full bypass so user-approved local actions run without prompts.
-        permissionMode: opts.planMode ? "plan" : "bypassPermissions",
-        allowDangerouslySkipPermissions: !opts.planMode,
+        // Ask: normal permission checks, with unanswered ones routed to the user.
+        // Auto (default): full bypass so local actions run without prompts.
+        permissionMode: opts.planMode ? "plan" : ask ? "default" : "bypassPermissions",
+        allowDangerouslySkipPermissions: !opts.planMode && !ask,
+        ...(ask
+          ? {
+              canUseTool: createToolApprover({
+                nodeId: opts.nodeId,
+                ask: (questions, signal) =>
+                  requestAnswer(questions, opts.client, opts.nodeId, signal),
+              }),
+            }
+          : {}),
         model: opts.model,
         // Codex-only levels (e.g. "ultra") would make `claude --effort` fail.
         ...(isClaudeEffort(opts.reasoningEffort) ? { effort: opts.reasoningEffort } : {}),

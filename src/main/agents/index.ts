@@ -1,5 +1,6 @@
 import type { Provider } from "@shared/types";
 import { runClaude } from "../claude/runner";
+import { approvalRefusal } from "./approvalSupport";
 import { runCodex } from "./codex";
 import { runCursor } from "./cursor";
 import { runKimi } from "./kimi";
@@ -13,6 +14,12 @@ export async function runAgent(
   prompt: string,
   opts: RunAgentOpts
 ): Promise<void> {
+  const refusal = approvalRefusal(provider, opts.approval);
+  if (refusal) {
+    opts.onEvent({ kind: "error", message: refusal });
+    opts.onEvent({ kind: "done", isError: true });
+    return;
+  }
   switch (provider) {
     case "claude":
       return runClaude(prompt, opts);
