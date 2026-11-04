@@ -17,8 +17,10 @@ import { CompactActions } from "./CompactActions";
 import { BranchBadge } from "./BranchBadge";
 import { PlanBadge } from "./PlanBadge";
 import { ApprovalBadge } from "./ApprovalBadge";
+import { CompareBadge } from "./CompareBadge";
 import { OnboardingTitle } from "./OnboardingTitle";
 import { useNodeChat } from "@/hooks/useNodeChat";
+import { useCompareSubmit } from "@/hooks/useCompareSubmit";
 import type { CanvasNode, ImageBlock } from "@shared/types";
 import type { Attachment } from "@shared/ipc";
 import { NodeResponse } from "./NodeResponse";
@@ -48,7 +50,8 @@ type CustomNodeData = CanvasNode["data"];
 function CustomNodeImpl(props: NodeProps) {
   const { id, data, selected } = props;
   const nodeData = data as CustomNodeData;
-  const { submit, stop, streaming } = useNodeChat(id);
+  const { submit: submitOwn, stop, streaming } = useNodeChat(id);
+  const submit = useCompareSubmit(id, submitOwn);
   const removeNode = useCanvasStore((s) => s.removeNode);
   const patchNode = useCanvasStore((s) => s.patchNode);
   const compacting = useCanvasStore((s) => s.compactingNodeIds[id] === true);
@@ -256,6 +259,7 @@ function CustomNodeImpl(props: NodeProps) {
           <FastBadge nodeId={id} />
           <PlanBadge nodeId={id} />
           <ApprovalBadge nodeId={id} />
+          {!hasSubmitted && <CompareBadge nodeId={id} />}
           {isMergeNode && (
             <span
               className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"

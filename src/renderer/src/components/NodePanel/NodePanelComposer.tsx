@@ -34,6 +34,8 @@ import { ContextBadge } from "@/components/Canvas/ContextBadge";
 import { BranchBadge } from "@/components/Canvas/BranchBadge";
 import { PlanBadge } from "@/components/Canvas/PlanBadge";
 import { ApprovalBadge } from "@/components/Canvas/ApprovalBadge";
+import { CompareBadge } from "@/components/Canvas/CompareBadge";
+import { useCompareStore } from "@/hooks/useCompareStore";
 import {
   filesToImageAttachments,
   imageFilesFromClipboard,
@@ -134,11 +136,15 @@ export function NodePanelComposer({
         attachments.length > 0 ? attachments : undefined,
       );
     } else {
+      // A follow-up creates its node in the pane; the ticks travel with the request. (A blank node
+      // keeps them in the store: its own submit takes them.)
+      const compareTargets = useCompareStore.getState().take(parentId);
       request({
         paneId,
         parentId,
         prefill: trimmed,
         ...(attachments.length > 0 ? { attachments } : {}),
+        ...(compareTargets.length > 0 ? { compareTargets } : {}),
       });
     }
     editorRef.current?.clear();
@@ -291,6 +297,7 @@ export function NodePanelComposer({
           <FastBadge nodeId={parentId} />
           <PlanBadge nodeId={parentId} />
           <ApprovalBadge nodeId={parentId} />
+          <CompareBadge nodeId={parentId} popoverSide="top" />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
