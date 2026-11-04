@@ -272,11 +272,15 @@ The design and its reasoning are in [docs/superpowers/specs/2026-10-05-browser-m
 
 ## Context window
 
-This covers Claude nodes only. Codex and Cursor nodes show no sizes, and none of the compaction or fitting below applies to them.
+Sizes show on Claude, Codex and Kimi nodes; Cursor reports none, so its nodes show nothing. Compaction and fitting (below) are Claude-only.
+
+- **Codex** nodes are measured after every reply, against the window Codex reports for the model.
+- **Kimi** nodes are measured after every reply in **ask** mode (Kimi reports its size over ACP). In **auto** mode Kimi reports nothing, so the size is an estimate (`~`) against the model's `max_context_size` from `~/.kimi-code/config.toml`.
+- Neither shows an auto-compact threshold: they compact on their own.
 
 ### Reading the sizes
 
-The context badge sits in each Claude node's toolbar, after the model and effort badges. It shows a small pie that fills with the share of the window in use, then the size:
+The context badge sits in each Claude, Codex or Kimi node's toolbar, after the model and effort badges. It shows a small pie that fills with the share of the window in use, then the size:
 
 | Node | Badge | Meaning |
 | --- | --- | --- |

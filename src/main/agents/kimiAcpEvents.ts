@@ -1,4 +1,5 @@
 import type { AskUserQuestion, AskUserResponsePayload } from "@shared/ipc";
+import { kimiContext } from "./contextSnapshots";
 import type { RunnerEvent } from "./types";
 
 type Block = { type?: string; text?: string };
@@ -50,6 +51,10 @@ export function acpUpdateEvents(update: unknown): RunnerEvent[] {
       if (typeof u.toolCallId !== "string" || (u.status !== "completed" && u.status !== "failed")) return [];
       const content = textOf(u.content) || (typeof u.rawOutput === "string" ? u.rawOutput : "");
       return [{ kind: "tool_result", toolUseId: u.toolCallId, content, isError: u.status === "failed" }];
+    }
+    case "usage_update": {
+      const context = kimiContext(u);
+      return context ? [{ kind: "context", context }] : [];
     }
     default:
       return [];

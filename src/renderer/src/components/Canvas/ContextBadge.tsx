@@ -1,8 +1,9 @@
-import { useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import clsx from "clsx";
 import type { NodeId } from "@shared/types";
-import { contextLabel, contextView, formatTokens, type ContextView } from "@shared/contextSize";
+import { contextLabel, formatTokens, type ContextView } from "@shared/contextSize";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
+import { useContextView } from "@/hooks/useContextView";
 import { BadgePopover } from "./BadgePopover";
 
 type Props = { nodeId: NodeId; popoverSide?: "top" | "bottom"; actions?: (close: () => void) => ReactNode };
@@ -13,12 +14,10 @@ const LEVEL_CLASS: Record<ContextView["level"], string> = {
   full: "text-red-600 dark:text-red-400",
 };
 
-/** Own and root→here context size for a Claude node; click for details and compaction. */
+/** Own and root→here context size for a Claude, Codex or Kimi node; click for details. */
 export function ContextBadge({ nodeId, popoverSide, actions }: Props) {
   const provider = useCanvasStore((s) => s.getEffectiveProvider(nodeId));
-  const nodes = useCanvasStore((s) => s.nodes);
-  // Other providers' nodes skip the sizing work entirely.
-  const view = useMemo(() => (provider === "claude" ? contextView(nodeId, nodes) : null), [provider, nodeId, nodes]);
+  const view = useContextView(nodeId);
   if (!view) return null;
 
   return (
@@ -49,11 +48,17 @@ export function ContextBadge({ nodeId, popoverSide, actions }: Props) {
             />
           )}
           {view.compactions > 0 && <Row label="Compactions" value={`${view.compactions} on this path`} />}
-          {view.isRoot && (
+          {view.isRoot && provider === "claude" && (
             <p className="mt-1 text-[9px] text-muted-foreground">Includes Claude Code's setup (system prompt, tools, CLAUDE.md).</p>
           )}
-          {!view.exact && <p className="mt-1 text-[9px] text-muted-foreground">Estimated; the next run measures it exactly.</p>}
-          {actions?.(close)}
+          {!view.exact && (
+            <p className="mt-1 text-[9px] text-muted-foreground">
+              {provider === "kimi"
+                ? "Estimated; Kimi reports its size only when it asks before acting (ask mode)."
+                : "Estimated; the next run measures it exactly."}
+            </p>
+          )}
+          {provider === "claude" && actions?.(close)}
         </div>
       )}
     </BadgePopover>

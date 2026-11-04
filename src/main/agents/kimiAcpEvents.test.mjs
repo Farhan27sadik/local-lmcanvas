@@ -14,6 +14,12 @@ const request = {
 const answered = (decision) => ({ id: "r", cancelled: false, answers: { decision } });
 
 describe("acpUpdateEvents", () => {
+  test("a usage_update becomes an exact context measurement; a malformed one is dropped", () => {
+    const [ev] = acpUpdateEvents({ sessionUpdate: "usage_update", used: 15164, size: 262144 });
+    expect(ev).toMatchObject({ kind: "context", context: { tokens: 15164, window: 262144, exact: true } });
+    expect(acpUpdateEvents({ sessionUpdate: "usage_update", used: 1 })).toEqual([]);
+  });
+
   test("message and thought chunks become text and thinking deltas", () => {
     expect(acpUpdateEvents({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "hi" } })).toEqual([{ kind: "text_delta", text: "hi" }]);
     expect(acpUpdateEvents({ sessionUpdate: "agent_thought_chunk", content: { type: "text", text: "hm" } })).toEqual([{ kind: "thinking_delta", text: "hm" }]);
