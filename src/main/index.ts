@@ -1,3 +1,4 @@
+import { listKimiModels } from "./agents/kimiModels";
 import { app, BrowserWindow, ipcMain, Menu, MenuItem, nativeImage, powerSaveBlocker, shell, dialog } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -865,6 +866,8 @@ function registerIpc(): void {
     const settings = await readSettings();
     return claudeModels.list(claudeBinPathOf(settings));
   }, "shared");
+
+  api.handle("providers:kimiModels", async () => listKimiModels(), "shared");
 
   api.handle("providers:codexRuntime", async () => {
     const settings = await readSettings();

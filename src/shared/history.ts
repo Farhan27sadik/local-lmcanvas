@@ -187,7 +187,7 @@ export function migrateMessage(raw: unknown): Message | null {
 }
 
 function isProvider(value: unknown): value is Provider {
-  return value === "claude" || value === "codex" || value === "cursor";
+  return value === "claude" || value === "codex" || value === "cursor" || value === "kimi";
 }
 
 function isErrorCode(value: unknown): value is ErrorCode {

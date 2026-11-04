@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type {
   AppSettings,
   CodexRuntimeInfo,
+  KimiModelInfo,
   Provider,
   ProviderConfig,
 } from "@shared/types";
@@ -36,6 +37,7 @@ export function SettingsModal({ open, onClose }: Props) {
   const [showLegacy, setShowLegacy] = useState(false);
   const [view, setView] = useState<View>("main");
   const [codexRuntime, setCodexRuntime] = useState<CodexRuntimeInfo | null>(null);
+  const [kimiModels, setKimiModels] = useState<KimiModelInfo[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +46,10 @@ export function SettingsModal({ open, onClose }: Props) {
       .codexRuntime()
       .then(setCodexRuntime)
       .catch(() => setCodexRuntime(null));
+    void window.api.providers
+      .kimiModels()
+      .then(setKimiModels)
+      .catch(() => setKimiModels([]));
   }, [open]);
 
   useEffect(() => {
@@ -299,12 +305,25 @@ export function SettingsModal({ open, onClose }: Props) {
                                         ? (codexRuntime?.defaultModelId ?? "Codex default")
                                         : provider === "cursor"
                                         ? "auto"
+                                        : provider === "kimi"
+                                        ? "Kimi default"
                                         : "claude-fable-5"
                                     }
                                     {...(provider === "codex"
                                       ? { list: "codex-models" }
+                                      : provider === "kimi"
+                                      ? { list: "kimi-models" }
                                       : {})}
                                   />
+                                  )}
+                                  {provider === "kimi" && kimiModels.length > 0 && (
+                                    <datalist id="kimi-models">
+                                      {kimiModels.map((model) => (
+                                        <option key={model.id} value={model.id}>
+                                          {model.displayName}
+                                        </option>
+                                      ))}
+                                    </datalist>
                                   )}
                                   {provider === "codex" &&
                                     codexRuntime &&

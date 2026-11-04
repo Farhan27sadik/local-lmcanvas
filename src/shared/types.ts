@@ -154,9 +154,18 @@ export type CodexRuntimeInfo = {
   protocolVersion: 2;
 };
 
+/** A model alias from the user's Kimi config. `id` is what `kimi -m` takes. */
+export type KimiModelInfo = {
+  id: string;
+  displayName: string;
+  contextSize?: number;
+  /** Whether the model accepts images (the adapter doesn't send any yet). */
+  imageInput: boolean;
+};
+
 export type ProviderSessionRef = {
   provider: Provider;
-  /** Claude session UUID or Codex app-server thread ID. */
+  /** Claude session UUID, Codex app-server thread ID or Kimi session ID. */
   id: string;
 };
 
@@ -252,9 +261,9 @@ export type CanvasEdge = {
   sourceYOffset?: number;
 };
 
-export type Provider = "claude" | "codex" | "cursor";
+export type Provider = "claude" | "codex" | "cursor" | "kimi";
 
-export const PROVIDERS: readonly Provider[] = ["claude", "codex", "cursor"] as const;
+export const PROVIDERS: readonly Provider[] = ["claude", "codex", "cursor", "kimi"] as const;
 
 export type ProviderConfig = {
   /** Override the default binary name. */

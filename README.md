@@ -1,6 +1,6 @@
 # local-lmcanvas
 
-A fully local, canvas-based branching AI conversation tool. The Electron app drives your installed Claude, Codex, or Cursor agent harness — no API keys to paste into the app, no database, and no LMCanvas telemetry.
+A fully local, canvas-based branching AI conversation tool. The Electron app drives your installed Claude, Codex, Cursor, or Kimi Code agent harness — no API keys to paste into the app, no database, and no LMCanvas telemetry.
 
 Each conversation is a tree of message nodes on a canvas. Branch from any node to fork the conversation history, or highlight text in a response to branch from that phrase. Canvases and settings persist to `~/.local-lmcanvas/`; each provider's sessions stay in its CLI's own folder.
 

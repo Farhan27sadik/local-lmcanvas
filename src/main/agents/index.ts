@@ -2,6 +2,7 @@ import type { Provider } from "@shared/types";
 import { runClaude } from "../claude/runner";
 import { runCodex } from "./codex";
 import { runCursor } from "./cursor";
+import { runKimi } from "./kimi";
 import type { RunAgentOpts, RunnerEvent } from "./types";
 
 export type { RunAgentOpts, RunnerEvent };
@@ -19,5 +20,7 @@ export async function runAgent(
       return runCodex(prompt, opts);
     case "cursor":
       return runCursor(prompt, opts);
+    case "kimi":
+      return runKimi(prompt, opts);
   }
 }

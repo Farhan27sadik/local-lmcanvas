@@ -28,7 +28,7 @@ Unit tests are `*.test.mjs` files run with Bun (`bun test src/shared/history.tes
 **A chat run, end to end:**
 1. `src/renderer/src/hooks/useNodeChat.ts` calls `window.api.chat.start` with the branch history plus the node's and primary parent's `providerSession`.
 2. `chat:start` in `src/main/index.ts` resolves the provider, model, cwd, and system prompt. The node setting wins, then the canvas, then `settings.json`.
-3. `runAgent` in `src/main/agents/index.ts` dispatches to the Claude runner (`src/main/claude/runner.ts`, Agent SDK) or the Codex/Cursor adapters in `src/main/agents/`.
+3. `runAgent` in `src/main/agents/index.ts` dispatches to the Claude runner (`src/main/claude/runner.ts`, Agent SDK) or the Codex/Cursor/Kimi adapters in `src/main/agents/`.
 4. Runners emit `RunnerEvent`s. Main forwards them as `chat:event` to the client that started the chat. Every chat ends with exactly one `done`, which the renderer waits for.
 
 **Resume vs replay.** If the node or its primary parent has a session from the *same* provider, only the new prompt is sent. For Claude that means `resume`, plus `forkSession` when branching off the parent. Otherwise the whole branch is replayed as a `[User]`/`[Assistant]` transcript (`src/main/claude/history.ts`), which also happens after a provider switch. A Claude replay is fitted to the model's window (`replayFit.ts`, `replaySummary.ts`) and retried on overflow (`overflowRetry.ts`). The README's "Context window" section describes how this behaves for the user.
