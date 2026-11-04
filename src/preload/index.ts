@@ -65,6 +65,8 @@ const api: LmcApi = {
     codexRuntime: () => ipcRenderer.invoke("providers:codexRuntime"),
     claudeModels: () => ipcRenderer.invoke("providers:claudeModels"),
     kimiModels: () => ipcRenderer.invoke("providers:kimiModels"),
+    modelChecks: () => ipcRenderer.invoke("providers:modelChecks"),
+    checkModels: () => ipcRenderer.invoke("providers:checkModels"),
   },
   askUser: {
     onRequest: (handler: (req: AskUserRequest) => void) => {

@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { CodexModelInfo, KimiModelInfo, NodeId, NodeSettings, Provider } from "@shared/types";
+import { isNewSinceCheck, withoutFailed } from "@shared/modelCatalog";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
+import { useModelChecksStore } from "@/hooks/useModelChecksStore";
+import { OlderModels } from "./OlderModels";
 import { ModelOption } from "./ModelOption";
 import { ProviderLogo } from "./ProviderLogo";
 
@@ -84,17 +87,20 @@ function CodexSection({
       .then(setRuntime)
       .catch(() => setRuntime(null));
   }, []);
-  if (!runtime || runtime.models.length === 0) return null;
+  const checks = useModelChecksStore((s) => s.checks);
+  if (!runtime) return null;
+  const models = withoutFailed(runtime.models, "codex", checks, (m) => m.id);
+  if (models.length === 0) return null;
   const active = activeModel ?? runtime.defaultModelId;
   return (
     <Section provider="codex" title="Codex">
-      {runtime.models.map((model) => (
+      {models.map((model) => (
         <ModelOption
           key={model.id}
           provider="codex"
           active={active === model.id}
           title={model.displayName}
-          subtitle={model.description}
+          subtitle={`${model.description}${isNewSinceCheck(checks, "codex", model.id) ? " · not checked" : ""}`}
           onSelect={() => onSelect(model)}
         />
       ))}
@@ -134,19 +140,33 @@ function KimiSection({
       .then(setModels)
       .catch(() => setModels([]));
   }, []);
+  const checks = useModelChecksStore((s) => s.checks);
   if (models.length === 0) return null;
+  const latest = withoutFailed(
+    models.filter((m) => m.latest),
+    "kimi",
+    checks,
+    (m) => m.id,
+  );
+  const older = models.filter((m) => !m.latest);
+  const row = (model: KimiModelInfo) => (
+    <ModelOption
+      key={model.id}
+      provider="kimi"
+      active={activeModel === model.id}
+      title={model.displayName}
+      subtitle={`${model.contextSize ? `${Math.round(model.contextSize / 1024)}K context · ` : ""}${model.id}${
+        isNewSinceCheck(checks, "kimi", model.id) ? " · not checked" : ""
+      }`}
+      onSelect={() => onSelect(model.id)}
+    />
+  );
   return (
     <Section provider="kimi" title="Kimi">
-      {models.map((model) => (
-        <ModelOption
-          key={model.id}
-          provider="kimi"
-          active={activeModel === model.id}
-          title={model.displayName}
-          subtitle={model.contextSize ? `${Math.round(model.contextSize / 1024)}K context · ${model.id}` : model.id}
-          onSelect={() => onSelect(model.id)}
-        />
-      ))}
+      {latest.map(row)}
+      <OlderModels count={older.length} defaultOpen={older.some((m) => m.id === activeModel)}>
+        {older.map(row)}
+      </OlderModels>
     </Section>
   );
 }

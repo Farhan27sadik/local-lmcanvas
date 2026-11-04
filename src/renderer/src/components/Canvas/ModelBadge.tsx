@@ -1,13 +1,17 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Brain, ChevronDown } from "lucide-react";
 import type { CanvasNode, NodeId } from "@shared/types";
 import { findClaudeModel } from "@shared/claudeModels";
+import { isNewSinceCheck, splitClaudeModels, withoutFailed } from "@shared/modelCatalog";
+import { useModelChecksStore } from "@/hooks/useModelChecksStore";
 import { nodeModelPatch } from "@/lib/claudeModelChoice";
 import { prettyModelLabel, useProviderInfo } from "@/hooks/useProviderInfo";
 import { useClaudeModelList, useRefreshClaudeModelsOnMount } from "@/hooks/useClaudeModels";
 import { useCanvasStore } from "@/hooks/useCanvasStore";
 import { claudeModelBadgeLabel } from "@/lib/modelLabel";
+import { CheckModelsFooter } from "./CheckModelsFooter";
 import { ModelOption } from "./ModelOption";
+import { OlderModels } from "./OlderModels";
 import { OtherProviderModels } from "./OtherProviderModels";
 import { ProviderLogo } from "./ProviderLogo";
 import { BadgePopover } from "./BadgePopover";
@@ -33,6 +37,9 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
   const models = modelList?.models ?? null;
   const list = models ?? [];
   const usage = useMemo(() => aggregateClaudeUsage(nodes), [nodes]);
+  const checks = useModelChecksStore((s) => s.checks);
+  const { latest, older } = useMemo(() => splitClaudeModels(list), [list]);
+  const shown = withoutFailed(latest, "claude", checks, (m) => m.value);
 
   const isClaude = effectiveProvider === "claude";
   // A non-Claude node's own model counts only when the node chose that provider itself.
@@ -60,6 +67,19 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
       ...(isClaude ? {} : { serviceTier: undefined }),
     });
   };
+
+  const claudeRow = (model: (typeof list)[number], close: () => void) => (
+    <ModelOption
+      key={model.value}
+      active={activeValue === model.value}
+      title={model.displayName}
+      subtitle={`${model.description}${isNewSinceCheck(checks, "claude", model.value) ? " · not checked" : ""}`}
+      onSelect={() => {
+        choose(model.value);
+        close();
+      }}
+    />
+  );
 
   return (
     <BadgePopover
@@ -107,19 +127,12 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
           {models === null && (
             <p className="px-2.5 py-1.5 text-[10px] text-muted-foreground">Loading Claude Code models…</p>
           )}
-          {list.map((model) => (
-            <ModelOption
-              key={model.value}
-              active={activeValue === model.value}
-              title={model.displayName}
-              subtitle={model.description}
-              onSelect={() => {
-                choose(model.value);
-                close();
-              }}
-            />
-          ))}
+          {shown.map((model) => claudeRow(model, close))}
+          <OlderModels count={older.length} defaultOpen={older.some((m) => m.value === activeValue)}>
+            {older.map((model) => claudeRow(model, close))}
+          </OlderModels>
           <OtherProviderModels nodeId={nodeId} close={close} />
+          <CheckModelsFooter />
           <div className="mt-1 border-t border-border px-2.5 pt-1.5 text-[9px] text-muted-foreground">
             This canvas: {formatUsage(usage)}
           </div>
@@ -132,6 +145,10 @@ export function ModelBadge({ nodeId, popoverSide }: Props) {
 /** Mounted only while the picker is open: asks for the latest list right away. */
 function RefreshOnOpen(): null {
   useRefreshClaudeModelsOnMount();
+  const load = useModelChecksStore((s) => s.load);
+  useEffect(() => {
+    void load();
+  }, [load]);
   return null;
 }
 

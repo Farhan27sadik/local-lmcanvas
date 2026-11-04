@@ -69,12 +69,13 @@ function parseArgs(raw: string | undefined): unknown {
  */
 export function parseKimiModels(toml: string): KimiModelInfo[] {
   const models: KimiModelInfo[] = [];
+  let defaultModel: string | undefined;
   let current: KimiModelInfo | null = null;
   for (const raw of toml.split(/\r?\n/)) {
     const text = raw.trim();
     const header = /^\[models\."([^"]+)"\]$/.exec(text);
     if (header) {
-      current = { id: header[1], displayName: header[1], imageInput: false };
+      current = { id: header[1], displayName: header[1], imageInput: false, latest: true };
       models.push(current);
       continue;
     }
@@ -82,12 +83,20 @@ export function parseKimiModels(toml: string): KimiModelInfo[] {
       current = null;
       continue;
     }
-    if (!current) continue;
+    if (!current) {
+      defaultModel ??= /^default_model\s*=\s*"([^"]+)"/.exec(text)?.[1];
+      continue;
+    }
     const kv = /^(display_name|max_context_size|capabilities)\s*=\s*(.+)$/.exec(text);
     if (!kv) continue;
     if (kv[1] === "display_name") current.displayName = kv[2].replace(/^"|"$/g, "");
     else if (kv[1] === "max_context_size") current.contextSize = Number(kv[2]) || undefined;
     else current.imageInput = /"image_in"/.test(kv[2]);
+  }
+  // Kimi has no "latest" alias: its default is the newest model it recommends, and the
+  // variants share its name (k3.1-pro, k3.1-pro-highspeed). Without a default, all count.
+  if (defaultModel && models.some((m) => m.id === defaultModel)) {
+    for (const m of models) m.latest = m.id === defaultModel || m.id.startsWith(`${defaultModel}-`);
   }
   return models;
 }

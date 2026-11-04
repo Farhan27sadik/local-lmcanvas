@@ -161,6 +161,22 @@ export type KimiModelInfo = {
   contextSize?: number;
   /** Whether the model accepts images (the adapter doesn't send any yet). */
   imageInput: boolean;
+  /** The newest generation: the config's default model and its variants. Older ones are tucked away. */
+  latest: boolean;
+};
+
+/** One model's last check: a tiny prompt answered (`ok`) or refused. */
+export type ModelCheck = { ok: boolean; checkedAt: number; error?: string };
+/** Saved check results, by provider and model id. A model with no entry is "not checked yet". */
+export type ModelChecks = Partial<Record<Provider, Record<string, ModelCheck>>>;
+/** What "Check my models" returns: this run's results and every saved check. */
+export type ModelCheckReport = { results: ModelCheckResult[]; checks: ModelChecks };
+/** What a check run reports per model. `unknown` (timeout, rate limit, not signed in) is not saved. */
+export type ModelCheckResult = {
+  provider: Provider;
+  model: string;
+  status: "ok" | "failed" | "unknown";
+  error?: string;
 };
 
 export type ProviderSessionRef = {

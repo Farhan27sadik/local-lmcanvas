@@ -13,6 +13,7 @@ import {
   MinimapSetting,
   PanSpeedSetting,
   ThemeSetting,
+  ModelChecksSection,
   ProviderRow,
   KeybindingsSetting,
   KeybindingsPage,
@@ -175,6 +176,7 @@ export function SettingsModal({ open, onClose }: Props) {
                     <ProviderRow key={p} provider={p} />
                   ))}
                 </div>
+                <ModelChecksSection />
               </div>
 
               {!isBrowser && <BrowserAccessSection />}
