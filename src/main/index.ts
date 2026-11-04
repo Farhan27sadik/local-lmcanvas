@@ -1,3 +1,4 @@
+import { listKimiModels } from "./agents/kimiModels";
 import { app, BrowserWindow, ipcMain, Menu, MenuItem, nativeImage, powerSaveBlocker, shell, dialog } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -653,7 +654,13 @@ function registerIpc(): void {
               models: listedModels,
             })
           : undefined;
-      const model = claudeRun ? claudeRun.model : providerCfg?.model;
+      // A node's own Kimi model counts only if it is an alias in the Kimi config: a Claude id left
+      // on the node by a provider switch must not reach `kimi -m`.
+      const nodeKimiModel =
+        provider === "kimi" && nodeSettings?.model
+          ? (await listKimiModels()).find((m) => m.id === nodeSettings.model)?.id
+          : undefined;
+      const model = claudeRun ? claudeRun.model : (nodeKimiModel ?? providerCfg?.model);
       const runModel = claudeRun?.resolvedModel ?? model;
 
       // Never fail on replay: a branch replayed without a Claude session is fitted to the window.
@@ -865,6 +872,8 @@ function registerIpc(): void {
     const settings = await readSettings();
     return claudeModels.list(claudeBinPathOf(settings));
   }, "shared");
+
+  api.handle("providers:kimiModels", async () => listKimiModels(), "shared");
 
   api.handle("providers:codexRuntime", async () => {
     const settings = await readSettings();

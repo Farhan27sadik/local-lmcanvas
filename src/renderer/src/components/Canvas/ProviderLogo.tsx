@@ -14,6 +14,8 @@ export function ProviderLogo({ provider, size = 10, className }: Props) {
       return <CodexLogo size={size} className={className} />;
     case "cursor":
       return <CursorLogo size={size} className={className} />;
+    case "kimi":
+      return <KimiLogo size={size} className={className} />;
   }
 }
 
@@ -72,6 +74,27 @@ function CursorLogo({ size = 10, className }: { size?: number; className?: strin
         clipRule="evenodd"
         d="M12 0L1.5 6.1V17.9L12 24L22.5 17.9V6.1L12 0ZM2.6 6.8H20L12.1 20.2V11.9L2.6 6.8Z"
       />
+    </svg>
+  );
+}
+
+// A plain "K" mark, not Moonshot's logo.
+function KimiLogo({ size = 10, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className ?? "opacity-90"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 3v18M18 4L8 12l10 8" />
     </svg>
   );
 }

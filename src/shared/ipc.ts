@@ -6,6 +6,7 @@ import type {
   CanvasSummary,
   ClaudeModelList,
   CodexRuntimeInfo,
+  KimiModelInfo,
   CompactionTrigger,
   ContextSnapshot,
   ErrorCode,
@@ -316,6 +317,8 @@ export type LmcApi = {
     codexRuntime(): Promise<CodexRuntimeInfo>;
     /** Models the installed Claude Code offers; its aliases (live: false) if it can't be asked. */
     claudeModels(): Promise<ClaudeModelList>;
+    /** Model aliases from the user's Kimi config. */
+    kimiModels(): Promise<KimiModelInfo[]>;
   };
   askUser: {
     /** Subscribe to incoming ask-user requests from the agent. Returns an unsubscribe function. */

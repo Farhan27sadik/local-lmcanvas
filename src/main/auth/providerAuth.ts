@@ -8,6 +8,7 @@ const DEFAULT_BIN: Record<Provider, string> = {
   claude: "claude",
   codex: "codex",
   cursor: "cursor-agent",
+  kimi: "kimi",
 };
 
 const PROBE_TIMEOUT_MS = 5_000;
@@ -98,6 +99,8 @@ export async function getProviderAuthStatus(
       return probeCodex(bin, resolved);
     case "cursor":
       return probeCursor(bin, resolved);
+    case "kimi":
+      return probeKimi(bin, resolved);
   }
 }
 
@@ -179,6 +182,29 @@ async function probeCursor(bin: string, binPath: string | null): Promise<Provide
     provider: "cursor",
     installed: true,
     authenticated,
+    binPath,
+    detail: combined || undefined,
+  };
+}
+
+// Kimi has no "login status": a signed-in install lists its managed provider, a fresh one lists none.
+// shortcut: an expired OAuth token still looks signed in here, the first chat then reports auth_required.
+async function probeKimi(bin: string, binPath: string | null): Promise<ProviderAuthStatus> {
+  const r = await probe(bin, ["provider", "list"]);
+  if (r.enoent) {
+    return {
+      provider: "kimi",
+      installed: false,
+      authenticated: false,
+      binPath,
+      detail: r.spawnError ?? "kimi binary not found",
+    };
+  }
+  const combined = `${r.stdout}\n${r.stderr}`.trim();
+  return {
+    provider: "kimi",
+    installed: true,
+    authenticated: /\bmodels=[1-9]/.test(combined),
     binPath,
     detail: combined || undefined,
   };

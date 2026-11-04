@@ -15,6 +15,7 @@ export type ProviderInfoState = {
 const DEFAULT_MODEL_BY_PROVIDER: Record<Exclude<Provider, "claude">, string> = {
   codex: "gpt-5.6-sol",
   cursor: "auto",
+  kimi: "", // empty: let Kimi use its own default_model
 };
 
 /**
@@ -62,6 +63,7 @@ export function useProviderInfo(canvasProvider?: Provider): ProviderInfoState {
       claude: prettyModelLabel("claude", undefined),
       codex: prettyModelLabel("codex", DEFAULT_MODEL_BY_PROVIDER.codex),
       cursor: prettyModelLabel("cursor", DEFAULT_MODEL_BY_PROVIDER.cursor),
+      kimi: prettyModelLabel("kimi", DEFAULT_MODEL_BY_PROVIDER.kimi),
     }
   );
 
@@ -99,6 +101,7 @@ function prettyModelLabel(provider: Provider, modelId?: string): string {
     }
     return prettyOpenAIModelName(modelId);
   }
+  if (provider === "kimi") return modelId ? modelId.replace(/^kimi-code\//, "") : "Default";
   return modelId ?? "Default";
 }
 

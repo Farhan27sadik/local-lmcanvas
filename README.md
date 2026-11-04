@@ -1,6 +1,6 @@
 # local-lmcanvas
 
-A fully local, canvas-based branching AI conversation tool. The Electron app drives your installed Claude, Codex, or Cursor agent harness — no API keys to paste into the app, no database, and no LMCanvas telemetry.
+A fully local, canvas-based branching AI conversation tool. The Electron app drives your installed Claude, Codex, Cursor, or Kimi Code agent harness — no API keys to paste into the app, no database, and no LMCanvas telemetry.
 
 Each conversation is a tree of message nodes on a canvas. Branch from any node to fork the conversation history, or highlight text in a response to branch from that phrase. Canvases and settings persist to `~/.local-lmcanvas/`; each provider's sessions stay in its CLI's own folder.
 
@@ -28,6 +28,7 @@ Long Claude conversations no longer run blind. [How it works](#context-window).
   - **The list stays current.** While a window is open, LMCanvas asks Claude Code again at most every 10 minutes, so a model a Claude Code update adds usually appears within about 20 minutes, or sooner when you open the picker or refocus the window. A model Claude Code drops is marked "no longer offered".
   - **Settings model** (top entry) follows the model chosen in Settings → **advanced** → **claude**, which is now a dropdown of the same list. Out of the box that setting is upstream's `claude-fable-5`; choose **Claude Code default** there to let Claude Code pick.
   - Picking another entry sets that node's own model. New root nodes start with the node settings you changed last, model included; pick **Settings model** to go back.
+  - **Kimi models** are listed under a Kimi heading below the Claude models, read from `~/.kimi-code/config.toml`. Picking one switches the node to Kimi and sets its model; picking a Claude model or Settings model switches it back. A Kimi node with no model of its own uses the model set in Settings → advanced → kimi, or Kimi's own default.
   - Codex and Cursor no longer appear in the picker. Picking a model on a Codex or Cursor node switches it to Claude, and new nodes then start on Claude too, because they copy the settings you changed last.
   - If Claude Code can't be asked, the picker falls back to its aliases (Default, Opus, Fable, Sonnet, Haiku) and asks again the next time the list is needed, at least a minute later.
 - **Correct model labels.** Badges show Claude Code's name for the model (e.g. "Opus 5.5"). Claude Code's own default is shown as the model it resolves to without your Claude Code settings. Other Claude ids are parsed (e.g. `claude-opus-5-5` → "Opus 5.5"), including legacy, dotted, date-suffixed and Bedrock/Vertex-style ids.

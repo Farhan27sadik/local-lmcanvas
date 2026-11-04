@@ -26,4 +26,10 @@ export const PROVIDER_INFO: Record<Provider, ProviderInfo> = {
     tagline: "Cursor. Sign in with your Cursor account.",
     installUrl: "https://cursor.com/cli",
   },
+  kimi: {
+    id: "kimi",
+    name: "Kimi",
+    tagline: "Moonshot AI. Sign in with Kimi Code.",
+    installUrl: "https://moonshotai.github.io/kimi-code/",
+  },
 };
